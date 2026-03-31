@@ -1,1 +1,40 @@
+#login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
 
+.login-card {
+  background: linear-gradient(180deg,rgba(8,19,31,.98),rgba(5,12,20,1));
+  border: 1px solid var(--ark-line);
+  border-radius: 20px;
+  padding: 48px 40px;
+  width: min(100%,460px);
+  text-align: center;
+}
+
+.login-logo {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: var(--ark-cyan);
+}
+
+.login-tagline {
+  color: var(--ark-text-dim);
+  font-size: 13px;
+  margin-bottom: 40px;
+}
+
+.btn-google {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  background: white;
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-weight: 600;
+  width: 100%;
+}
