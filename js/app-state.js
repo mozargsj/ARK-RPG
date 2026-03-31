@@ -8,3 +8,6 @@ let isReadOnly = false;
 
 let saveTimer = null;
 let sheetInitialized = false;
+
+let sheetStore = null;
+let activeTabId = null;
