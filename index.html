@@ -681,6 +681,7 @@
         </div>
       </div>
       <div class="actions" id="sheet-topbar-actions">
+        <button onclick="backToDashboard()" id="btn-back-dashboard">← Dashboard</button>
         <button id="exportBtn">Exportar</button>
         <button id="importBtn">Importar</button>
         <button id="printBtn">Imprimir / PDF</button>
@@ -1225,6 +1226,7 @@
     document.getElementById('readonly-banner').classList.add('visible');
     document.getElementById('sheet-topbar-actions').style.display = 'none';
     document.getElementById('sheet-subtitle').textContent = `Visualizando ficha de ${name || uid} — somente leitura`;
+
     await initSheetForUser(uid, true);
     showScreen('sheet');
   }
@@ -1233,13 +1235,14 @@
     viewingUid = null;
     isReadOnly = false;
     document.getElementById('readonly-banner').classList.remove('visible');
-    document.getElementById('btn-back-to-dash').style.display = 'none';
+    document.getElementById('btn-back-to-dash').style.display = (currentRole === 'admin' || currentRole === 'master') ? '' : 'none';    
     document.getElementById('sheet-topbar-actions').style.display = '';
     document.getElementById('sheet-subtitle').textContent = 'Salva automaticamente na nuvem.';
+   
     await initSheetForUser(currentUser.uid, false);
     showScreen('sheet');
-  }
-
+  }  
+  
   function backToDashboard() {
     viewingUid = null;
     isReadOnly = false;
