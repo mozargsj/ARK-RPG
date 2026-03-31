@@ -712,6 +712,11 @@
           <div class="left-header-box"><label for="pontosPorNivel">Pontos por nível</label><input id="pontosPorNivel" type="number" value="5" readonly /></div>
           <div class="left-header-box"><label for="bonusPontos">Ajuste manual de pontos</label><input id="bonusPontos" data-save type="number" value="0" /></div>
           <div class="left-header-box"><label for="perkBonus">Ajuste manual de perks</label><input id="perkBonus" data-save type="number" value="0" /></div>
+          <div style="margin-top:10px;">
+            <button id="applyPointsBtn" onclick="confirmApplyPoints()" class="dash-btn">
+              Aplicar distribuição de pontos
+            </button>
+          </div>
         </div>
         <div class="metric-grid left-metrics section-space">
           <div class="metric"><div class="name">Pontos totais</div><div class="value" id="pontosTotais">0</div><div class="sub">nível × pontos + ajuste</div></div>
@@ -1025,7 +1030,7 @@
         await userRef.update({ displayName: user.displayName || user.email, photoURL: user.photoURL || '' });
       }
 
-      if (currentRole === 'player') {
+      if (currentRole === 'player' || currentRole === 'admin' currentRole === 'master') {
         await initSheetForUser(user.uid, false);
         showScreen('sheet');
       } else {
@@ -1041,7 +1046,9 @@
   /* ─── DASHBOARD ─── */
   async function loadDashboard() {
     const u = currentUser;
+    document.getElementById('dash-viewing-own').style.display = '';
     document.getElementById('dash-avatar').src = u.photoURL || '';
+    document.getElementById('btn-admin-panel').style.display = currentRole === 'admin' ? '' : 'none';
     document.getElementById('dash-name').textContent = u.displayName || u.email;
     const badge = document.getElementById('dash-role-badge');
     badge.textContent = currentRole === 'admin' ? 'Admin' : 'Mestre';
@@ -1062,7 +1069,7 @@
 
     const players = usersSnap.docs
       .map(d => d.data())
-      .filter(u => u.role === 'player');
+      .filter(u => u.role === 'player' || u.uid === currentUser.uid);
 
     if (!players.length) {
       grid.innerHTML = '<div class="dash-empty">Nenhum jogador ainda. Aguarde os players fazerem login.</div>';
