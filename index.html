@@ -980,6 +980,44 @@
     </div>
   </div>
 
+  <div id="applyPointsModal" style="
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,.6);
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+  ">
+  
+    <div style="
+      background:#121b2e;
+      padding:25px;
+      border-radius:12px;
+      max-width:420px;
+      text-align:center;
+      color:#e8eefc;
+      ">
+    
+        <h3>Confirmar distribuição</h3>
+    
+        <p>Depois de aplicar os pontos não será possível redistribuir.</p>
+    
+        <label style="display:flex;gap:8px;margin-top:12px;">
+          <input type="checkbox" id="dontShowAgainPoints">
+          Não mostrar novamente
+        </label>
+    
+        <div style="margin-top:18px;">
+          <button onclick="applyPoints()">Confirmar</button>
+          <button onclick="closeApplyPointsModal()">Cancelar</button>
+        </div>    
+    </div>
+  </div>
+  
   <input type="file" id="fileInput" accept="application/json" style="display:none" />
 </div><!-- /sheet-screen -->
 
@@ -1007,6 +1045,52 @@
     auth.signInWithPopup(googleProvider)
       .catch(err => console.error("Login error:", err));
   }
+
+  function confirmApplyPoints() {
+
+    const skip = localStorage.getItem("skipApplyPointsConfirm");
+  
+    if (skip === "true") {
+      applyPoints();
+      return;
+    }
+  
+    document.getElementById("applyPointsModal").style.display = "flex";
+  }
+  
+  function closeApplyPointsModal() {
+    document.getElementById("applyPointsModal").style.display = "none";
+  }
+  
+  async function applyPoints() {
+
+    const checkbox = document.getElementById("dontShowAgainPoints");
+  
+    if (checkbox.checked) {
+      localStorage.setItem("skipApplyPointsConfirm", "true");
+    }
+  
+    document.getElementById("applyPointsModal").style.display = "none";
+  
+    await lockPointInputs();
+  
+    persistSheetStore();
+  }
+
+  async function lockPointInputs() {
+    document
+      .querySelectorAll("#bonusPontos, #perkBonus")
+      .forEach(el => el.disabled = true);
+  
+    document.getElementById("applyPointsBtn").disabled = true;
+  
+    if (!currentUser) return;
+  
+    await db.collection("sheets")
+      .doc(currentUser.uid)
+      .set({ pointsLocked: true }, { merge: true });
+}
+  
   function signOut() { auth.signOut().then(() => { currentUser = null; currentRole = null; showScreen('login'); }); }
 
   auth.onAuthStateChanged(async (user) => {
@@ -1277,6 +1361,10 @@
       } else { initBlankSheetStore(); }
     } catch(e) { initBlankSheetStore(); }
 
+    if (snap.exists && snap.data().pointsLocked) {
+      lockPointInputs();
+    }
+    
     if (!sheetInitialized) {
       createPerks();
       sheetInitialized = true;
