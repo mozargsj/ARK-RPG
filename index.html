@@ -21,9 +21,15 @@
       measurementId: "G-E234MJKSTS"
     };
 
-    // Seu email Google — será definido automaticamente como administrador no primeiro login
-    const ADMIN_EMAIL = "mozargsj@gmail.com";
-  </script>
+    /* ─── FIREBASE INIT ─── */
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+    const googleProvider = new firebase.auth.GoogleAuthProvider();
+  
+      // Seu email Google — será definido automaticamente como administrador no primeiro login
+      const ADMIN_EMAIL = "mozargsj@gmail.com";
+    </script>
 
   <style>
     /* ─── CSS VARIABLES ─── */
@@ -975,11 +981,6 @@
      JAVASCRIPT
 ═══════════════════════════════════════ -->
 <script>
-  /* ─── FIREBASE INIT ─── */
-  firebase.initializeApp(FIREBASE_CONFIG);
-  const auth = firebase.auth();
-  const db   = firebase.firestore();
-  const googleProvider = new firebase.auth.GoogleAuthProvider();
 
   /* ─── APP STATE ─── */
   let currentUser   = null;
