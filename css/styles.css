@@ -557,4 +557,36 @@
     @media print {
       #readonly-banner, #save-indicator, .topbar-back, #sheet-topbar-actions { display: none !important; }
     }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,.6);
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    
+    .modal-box {
+      background: #121b2e;
+      padding: 25px;
+      border-radius: 12px;
+      max-width: 420px;
+      text-align: center;
+      color: #e8eefc;
+    }
+    
+    .modal-checkbox {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    .modal-actions {
+      margin-top: 18px;
+    }
   
