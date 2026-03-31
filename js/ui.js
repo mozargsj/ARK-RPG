@@ -47,3 +47,17 @@
   }
 
   function closeCloseTabModal() { pendingCloseTabId = null; closeTabModal.classList.add('hidden'); closeTabModal.setAttribute('aria-hidden','true'); }
+
+function closeTab(tabId) {
+    const idx = sheetStore.tabs.findIndex(t => t.id === tabId);
+    if (idx === -1) return;
+    sheetStore.tabs.splice(idx, 1);
+    if (!sheetStore.tabs.length) { const t={id:uniqueId(),name:defaultTabName(1),data:makeBlankState()}; sheetStore.tabs=[t]; }
+    if (!sheetStore.tabs.some(t => t.id === sheetStore.activeId)) sheetStore.activeId = sheetStore.tabs[Math.max(0,idx-1)].id;
+    persistSheetStore();
+    renderTabs();
+    const active = getActiveTab();
+    applyStateToForm(active ? active.data : {});
+    createInventoryRows(true);
+    updateAll();
+  }
