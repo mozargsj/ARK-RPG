@@ -17,52 +17,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <script>
-    /*
-    ══════════════════════════════════════════════════════════════════
-      CONFIGURAÇÃO — Preencha antes de usar
-    ══════════════════════════════════════════════════════════════════
-
-    PASSO 1 — Crie um projeto no Firebase:
-      https://console.firebase.google.com
-      → "Add project" → nome → Continue → Create project
-
-    PASSO 2 — Adicione um Web App:
-      Project Settings (ícone de engrenagem) → "Your apps" → Web (</>)
-      → registre o app → copie o firebaseConfig abaixo
-
-    PASSO 3 — Ative o Google Auth:
-      Authentication → Sign-in method → Google → Enable → Save
-
-    PASSO 4 — Crie o Firestore:
-      Firestore Database → Create database → Production mode → escolha região
-
-    PASSO 5 — Cole as regras de segurança no Firestore:
-      Firestore → Rules → substitua tudo pelo seguinte:
-
-      rules_version = '2';
-      service cloud.firestore {
-        match /databases/{database}/documents {
-          function role() {
-            return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-          }
-          function isMasterOrAdmin() { return role() in ['admin','master']; }
-          function isAdmin() { return role() == 'admin'; }
-
-          match /users/{uid} {
-            allow read: if request.auth != null && (request.auth.uid == uid || isMasterOrAdmin());
-            allow create: if request.auth != null && request.auth.uid == uid;
-            allow update: if request.auth != null && (request.auth.uid == uid || isAdmin());
-          }
-          match /sheets/{uid} {
-            allow read: if request.auth != null && (request.auth.uid == uid || isMasterOrAdmin());
-            allow write: if request.auth != null && (request.auth.uid == uid || isAdmin());
-          }
-        }
-      }
-
-    PASSO 6 — Preencha FIREBASE_CONFIG e ADMIN_EMAIL abaixo:
-    ══════════════════════════════════════════════════════════════════
-    */
     const firebaseConfig = {
       apiKey: "AIzaSyCMsRQZ5UAQvVGDt8SXWRewUOKeGnaewro",
       authDomain: "ark-rpg-fd8a6.firebaseapp.com",
