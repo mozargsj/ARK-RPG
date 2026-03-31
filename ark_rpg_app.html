@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "firebase/app";
+  import { getAnalytics } from "firebase/analytics";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARK RPG</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    /*
+    ══════════════════════════════════════════════════════════════════
+      CONFIGURAÇÃO — Preencha antes de usar
+    ══════════════════════════════════════════════════════════════════
+
+    PASSO 1 — Crie um projeto no Firebase:
+      https://console.firebase.google.com
+      → "Add project" → nome → Continue → Create project
+
+    PASSO 2 — Adicione um Web App:
+      Project Settings (ícone de engrenagem) → "Your apps" → Web (</>)
+      → registre o app → copie o firebaseConfig abaixo
+
+    PASSO 3 — Ative o Google Auth:
+      Authentication → Sign-in method → Google → Enable → Save
+
+    PASSO 4 — Crie o Firestore:
+      Firestore Database → Create database → Production mode → escolha região
+
+    PASSO 5 — Cole as regras de segurança no Firestore:
+      Firestore → Rules → substitua tudo pelo seguinte:
+
+      rules_version = '2';
+      service cloud.firestore {
+        match /databases/{database}/documents {
+          function role() {
+            return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+          }
+          function isMasterOrAdmin() { return role() in ['admin','master']; }
+          function isAdmin() { return role() == 'admin'; }
+
+          match /users/{uid} {
+            allow read: if request.auth != null && (request.auth.uid == uid || isMasterOrAdmin());
+            allow create: if request.auth != null && request.auth.uid == uid;
+            allow update: if request.auth != null && (request.auth.uid == uid || isAdmin());
+          }
+          match /sheets/{uid} {
+            allow read: if request.auth != null && (request.auth.uid == uid || isMasterOrAdmin());
+            allow write: if request.auth != null && (request.auth.uid == uid || isAdmin());
+          }
+        }
+      }
+
+    PASSO 6 — Preencha FIREBASE_CONFIG e ADMIN_EMAIL abaixo:
+    ══════════════════════════════════════════════════════════════════
+    */
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMsRQZ5UAQvVGDt8SXWRewUOKeGnaewro",
+      authDomain: "ark-rpg-fd8a6.firebaseapp.com",
+      projectId: "ark-rpg-fd8a6",
+      storageBucket: "ark-rpg-fd8a6.firebasestorage.app",
+      messagingSenderId: "454548617469",
+      appId: "1:454548617469:web:e9035f5757454302202694",
+      measurementId: "G-E234MJKSTS"
+    };
+
+    // Seu email Google — será definido automaticamente como administrador no primeiro login
+    const ADMIN_EMAIL = "mozargsj@gmail.com";
+  </script>
+
+  <style>
+    /* ─── CSS VARIABLES ─── */
+    :root {
+      --bg: #0b1220; --panel: #121b2e; --panel-2: #17233a; --line: #2b3a5d;
+      --text: #e8eefc; --muted: #9eb0d1; --accent: #79a8ff; --accent-2: #70e1b5;
+      --danger: #ff7d7d; --warn: #ffc86b; --ok: #8ce99a;
+      --shadow: 0 18px 45px rgba(0,0,0,.28); --radius: 18px;
+      --ark-cyan: #7de7ff; --ark-cyan-soft: rgba(125,231,255,.18);
+      --ark-line: rgba(94,218,255,.26); --ark-panel: rgba(7,17,28,.88);
+      --ark-row: rgba(10,24,38,.92); --ark-row-2: rgba(8,19,31,.98);
+      --ark-text-dim: #9cc8d6;
+    }
+    * { box-sizing: border-box; }
+
+    /* ─── BASE ─── */
+    body {
+      margin: 0;
+      font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: radial-gradient(circle at top, rgba(40,115,150,.22), transparent 28%),
+                  linear-gradient(180deg, #040a11 0%, #06101a 55%, #03070d 100%);
+      color: #dff8ff;
+      min-height: 100vh;
+    }
+
+    /* ─── SCREEN MANAGER ─── */
+    .screen { display: none !important; }
+    .screen.active { display: block !important; }
+    #sheet-screen { display: none !important; }
+    #sheet-screen.active { display: block !important; }
+
+    /* ══════════════════════════════════════════
+       AUTH — Login screen
+    ══════════════════════════════════════════ */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #login-screen.active { display: flex !important; }
+    .login-card {
+      background: linear-gradient(180deg, rgba(8,19,31,.98), rgba(5,12,20,1));
+      border: 1px solid var(--ark-line);
+      border-radius: 20px;
+      padding: 48px 40px;
+      width: min(100%, 460px);
+      text-align: center;
+      box-shadow: 0 0 60px rgba(0,200,255,.1);
+    }
+    .login-logo {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ark-cyan);
+      text-shadow: 0 0 20px rgba(0,210,255,.3);
+      margin-bottom: 8px;
+    }
+    .login-tagline {
+      color: var(--ark-text-dim);
+      font-size: 13px;
+      letter-spacing: .06em;
+      margin-bottom: 40px;
+    }
+    .btn-google {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      color: #3c4043;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 12px rgba(0,0,0,.3);
+      transition: filter .15s;
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-google:hover { filter: brightness(.96); }
+    .btn-google svg { flex-shrink: 0; }
+    .login-note { color: var(--ark-text-dim); font-size: 11px; margin-top: 20px; }
+
+    /* ══════════════════════════════════════════
+       DASHBOARD
+    ══════════════════════════════════════════ */
+    #dashboard-screen { min-height: 100vh; }
+    #dashboard-screen.active { display: block !important; }
+    .dash-topbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--ark-line);
+      background: linear-gradient(180deg, rgba(8,19,31,.95), rgba(5,12,20,.98));
+      flex-wrap: wrap;
+    }
+    .dash-logo {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--ark-cyan);
+      text-shadow: 0 0 12px rgba(0,210,255,.2);
+      flex: 1;
+    }
+    .dash-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .dash-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--ark-line);
+      object-fit: cover;
+    }
+    .dash-name { font-size: 14px; font-weight: 600; }
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .role-admin  { background: rgba(255,200,80,.15);  border: 1px solid rgba(255,200,80,.4);  color: #ffd060; }
+    .role-master { background: rgba(180,100,255,.15); border: 1px solid rgba(180,100,255,.4); color: #cc88ff; }
+    .role-player { background: rgba(125,231,255,.12); border: 1px solid var(--ark-line);       color: var(--ark-cyan); }
+    .dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .dash-btn {
+      min-height: 38px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--ark-line);
+      background: linear-gradient(180deg, rgba(13,42,61,.96), rgba(8,22,35,.96));
+      color: var(--ark-cyan);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .dash-btn:hover { filter: brightness(1.1); }
+    .dash-btn-admin { border-color: rgba(255,200,80,.4); color: #ffd060; }
+    .dash-btn-danger { border-color: rgba(255,100,100,.4); color: #ff8888; }
+    .dash-btn-own { border-color: var(--ark-line); color: var(--ark-cyan); }
+
+    .dash-body { padding: 28px 24px; }
+    .dash-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--ark-text-dim);
+      margin-bottom: 16px;
+    }
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .player-card {
+      background: linear-gradient(180deg, rgba(9,22,35,.97), rgba(5,12,20,.98));
+      border: 1px solid var(--ark-line);
+      border-radius: 14px;
+      padding: 18px;
+      cursor: pointer;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .player-card:hover {
+      border-color: rgba(125,231,255,.6);
+      box-shadow: 0 0 20px rgba(0,210,255,.1);
+    }
+    .player-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .player-card-avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 2px solid var(--ark-line);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .player-card-info { min-width: 0; }
+    .player-card-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #dff8ff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .player-card-email { font-size: 11px; color: var(--ark-text-dim); }
+    .player-card-char { font-size: 12px; color: var(--ark-cyan); margin-top: 2px; }
+    .player-card-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .player-card-stat {
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(94,218,255,.15);
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+    }
+    .player-card-stat .label { font-size: 9px; color: var(--ark-text-dim); text-transform: uppercase; letter-spacing: .06em; }
+    .player-card-stat .val { font-size: 18px; font-weight: 700; color: #f0fdff; margin-top: 2px; }
+    .player-card-action {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(94,218,255,.12);
+      font-size: 11px;
+      color: var(--ark-cyan);
+      letter-spacing: .06em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .dash-empty {
+      padding: 40px;
+      text-align: center;
+      color: var(--ark-text-dim);
+      font-size: 14px;
+    }
+
+    /* ══════════════════════════════════════════
+       ADMIN PANEL
+    ══════════════════════════════════════════ */
+    #admin-screen { min-height: 100vh; }
+    #admin-screen.active { display: block !important; }
+    .admin-body { padding: 28px 24px; max-width: 860px; }
+    .admin-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffd060;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .user-row {
+      display: grid;
+      grid-template-columns: 44px 1fr auto auto;
+      gap: 14px;
+      align-items: center;
+      background: linear-gradient(180deg, rgba(9,22,35,.97), rgba(5,12,20,.98));
+      border: 1px solid var(--ark-line);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .user-row img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ark-line); object-fit: cover; }
+    .user-info .uname { font-size: 14px; font-weight: 600; }
+    .user-info .uemail { font-size: 11px; color: var(--ark-text-dim); }
+    .user-role-select {
+      background: linear-gradient(180deg, rgba(10,25,39,.96), rgba(6,15,25,.98));
+      border: 1px solid rgba(95,193,219,.28);
+      border-radius: 8px;
+      color: #ecfbff;
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-save-role {
+      min-height: 36px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,200,80,.4);
+      background: rgba(255,200,80,.1);
+      color: #ffd060;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-save-role:hover { background: rgba(255,200,80,.2); }
+    .admin-note { font-size: 12px; color: var(--ark-text-dim); margin-top: 4px; }
+
+    /* ══════════════════════════════════════════
+       READONLY BANNER
+    ══════════════════════════════════════════ */
+    #readonly-banner {
+      display: none;
+      background: linear-gradient(90deg, rgba(180,100,255,.18), rgba(100,150,255,.12));
+      border-bottom: 1px solid rgba(180,100,255,.35);
+      padding: 10px 24px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #cc88ff;
+      text-align: center;
+    }
+    #readonly-banner.visible { display: block; }
+
+    /* SAVE INDICATOR */
+    #save-indicator {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      background: rgba(8,19,31,.95);
+      border: 1px solid var(--ark-line);
+      color: var(--ark-text-dim);
+      display: none;
+      z-index: 1000;
+      transition: opacity .3s;
+    }
+    #save-indicator.saving { display: block; color: #ffc86b; border-color: rgba(255,200,80,.4); }
+    #save-indicator.saved  { display: block; color: #8ce99a; border-color: rgba(140,230,154,.4); }
+
+    /* ══════════════════════════════════════════
+       SHEET — ORIGINAL CSS (preserved)
+    ══════════════════════════════════════════ */
+    .wrap { max-width: 1600px; margin: 0 auto; padding: 18px; }
+    .topbar {
+      display: flex; gap: 16px; justify-content: space-between; align-items: center;
+      margin-bottom: 20px; flex-wrap: wrap;
+      padding: 12px 14px;
+      border: 1px solid var(--ark-line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(8,19,31,.88), rgba(5,12,20,.92));
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02), 0 0 22px rgba(0,210,255,.06);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .topbar-back {
+      min-height: 38px; padding: 8px 14px;
+      border-radius: 10px; border: 1px solid var(--ark-line);
+      background: rgba(8,19,31,.9); color: var(--ark-text-dim);
+      font-size: 12px; font-weight: 700; letter-spacing: .05em;
+      text-transform: uppercase; cursor: pointer;
+    }
+    .topbar-back:hover { color: var(--ark-cyan); border-color: rgba(125,231,255,.5); }
+    h1 {
+      margin: 0; font-size: 26px; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--ark-cyan);
+      text-shadow: 0 0 14px rgba(0,210,255,.18);
+    }
+    .subtitle { color: var(--ark-text-dim); margin-top: 6px; font-size: 14px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      border: 1px solid var(--ark-line);
+      background: linear-gradient(180deg, rgba(13,42,61,.96), rgba(8,22,35,.96));
+      color: var(--ark-cyan); border-radius: 10px; padding: 10px 14px;
+      cursor: pointer; font-weight: 600; min-height: 42px;
+      text-transform: uppercase; letter-spacing: .05em; font-size: 12px;
+      border: 1px solid rgba(105,223,255,.34);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    button:hover { filter: brightness(1.07); box-shadow: 0 0 14px rgba(0,210,255,.18); }
+    .btn-accent { background: linear-gradient(180deg, #2f5fb8, #284f97); border-color: #3d6aca; color: #fff; }
+    .btn-danger { background: linear-gradient(180deg, rgba(136,55,55,.95), rgba(107,45,45,.95)); border-color: rgba(167,74,74,.7); color: #ffaaaa; }
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(340px,1.05fr) minmax(420px,1.12fr) minmax(330px,.95fr);
+      gap: 14px; align-items: start;
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(8,18,30,.95), rgba(5,12,20,.96));
+      border: 1px solid var(--ark-line); border-radius: 14px;
+      box-shadow: var(--shadow); padding: 14px;
+    }
+    .card h2, .wide-card h2 {
+      margin: 0 0 12px; padding: 0 0 8px; font-size: 15px;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--ark-cyan);
+      border-bottom: 1px solid rgba(94,218,255,.16);
+    }
+    .muted { color: var(--ark-text-dim); }
+    .row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+    .row-3 { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+    .row-4 { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+    label {
+      display: block; font-size: 10px; color: #8ec9da; margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+    h2,h3,.name,label,.sub,.footer-note { overflow-wrap: anywhere; }
+    input,select,textarea {
+      width: 100%;
+      background: linear-gradient(180deg, rgba(10,25,39,.96), rgba(6,15,25,.98));
+      color: #ecfbff; border: 1px solid rgba(95,193,219,.28);
+      border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    input[readonly] {
+      background: linear-gradient(180deg, rgba(8,18,29,.96), rgba(5,12,20,1));
+      color: #cdebf3;
+    }
+    input:not([readonly]):focus, select:focus, textarea:focus {
+      border-color: rgba(140,193,255,.95);
+      box-shadow: 0 0 0 3px rgba(121,168,255,.18);
+    }
+    .stat-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .attr {
+      display: grid;
+      grid-template-columns: minmax(0,1.1fr) minmax(88px,112px) minmax(0,.9fr) minmax(0,1.15fr);
+      align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;
+      background: linear-gradient(180deg, rgba(9,23,36,.96), rgba(6,15,24,.98));
+      border: 1px solid rgba(95,193,219,.22); overflow: hidden;
+    }
+    .attr-head, .attr-head-center {
+      min-height: auto; align-items: flex-start; text-align: left;
+      gap: 4px; margin-bottom: 0; min-width: 0;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .attr-head-center strong {
+      font-size: 15px; letter-spacing: .05em; text-transform: uppercase;
+      color: var(--ark-cyan); overflow-wrap: anywhere; word-break: break-word;
+    }
+    .attr-sub, .pill {
+      justify-content: flex-start; padding: 0; border: 0; border-radius: 0;
+      background: transparent; color: var(--ark-text-dim); font-size: 11px;
+      white-space: normal; overflow-wrap: anywhere; word-break: break-word;
+      display: inline-flex; align-items: center;
+    }
+    .attr-input {
+      min-height: 46px; font-size: clamp(18px,2vw,22px);
+      font-weight: 700; text-align: center; border-radius: 8px;
+      background: linear-gradient(180deg, rgba(18,30,55,.98), rgba(10,18,34,.98));
+      border: 1px solid rgba(121,168,255,.72);
+      box-shadow: 0 0 0 1px rgba(121,168,255,.08), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .mini { display: contents; }
+    .mini > div { padding: 0; border: 0; background: transparent; box-shadow: none; }
+    .mini > div label { margin-bottom: 7px; font-size: 11px; line-height: 1.2; min-height: 0; }
+    .mini > div input { min-height: 44px; border-radius: 8px; text-align: left; font-size: 13px; font-weight: 600; }
+    .metric-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+    .metric {
+      border: 1px solid rgba(95,193,219,.2);
+      border-radius: 10px; padding: 10px 12px; min-width: 0;
+      overflow-wrap: anywhere;
+      background: linear-gradient(180deg, rgba(9,22,35,.95), rgba(6,15,25,.98));
+      display: grid;
+      grid-template-columns: minmax(0,1.15fr) minmax(84px,auto) minmax(0,1.2fr);
+      align-items: center; gap: 10px;
+    }
+    .metric .name { font-size: 11px; color: var(--ark-cyan); overflow-wrap: anywhere; word-break: break-word; min-height: auto; }
+    .metric .value { font-size: clamp(18px,2vw,24px); font-weight: 700; margin-top: 0; line-height: 1.05; text-align: right; color: #f4fdff; overflow-wrap: anywhere; word-break: break-word; }
+    .metric .sub { color: var(--ark-text-dim); margin-top: 0; font-size: 11px; line-height: 1.35; text-align: right; overflow-wrap: anywhere; word-break: break-word; }
+    .status-ok { color: var(--ok); } .status-warn { color: var(--warn); } .status-danger { color: var(--danger); }
+    .section-space { margin-top: 18px; }
+    .resource-box {
+      display: grid;
+      grid-template-columns: minmax(0,1.15fr) minmax(0,.8fr) minmax(0,.78fr) minmax(92px,auto) minmax(92px,auto);
+      gap: 8px; align-items: end; margin-bottom: 10px; padding: 10px; border-radius: 10px;
+      border: 1px solid rgba(95,193,219,.2);
+      background: linear-gradient(180deg, rgba(9,22,35,.95), rgba(6,15,25,.98)); overflow: hidden;
+    }
+    .resource-box .resource-side-action button { background: linear-gradient(180deg, rgba(32,83,63,.92), rgba(25,66,50,.92)); border-color: rgba(105,189,150,.36); min-height: 44px; width: 100%; }
+    .resource-box .resource-main-action button { background: linear-gradient(180deg, rgba(37,58,96,.96), rgba(29,47,78,.96)); border-color: rgba(100,133,203,.38); min-height: 44px; width: 100%; }
+    .progress { height: 10px; background: rgba(3,8,14,.9); border: 1px solid rgba(95,193,219,.18); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+    .bar { height: 100%; width: 0; box-shadow: 0 0 10px rgba(0,210,255,.14); }
+    .bar.hp      { background: linear-gradient(90deg,#4fd8b7,#8cf7d1); }
+    .bar.torpor  { background: linear-gradient(90deg,#68c7ff,#a0e1ff); }
+    .bar.stamina { background: linear-gradient(90deg,#62d0ff,#84f0ff); }
+    .bar.peso    { background: linear-gradient(90deg,#79b7ff,#b4d5ff); }
+    .perk-grid { display: grid; grid-template-columns: repeat(3,minmax(240px,1fr)); gap: 10px; justify-content: center; }
+    .perk-group { border: 1px solid rgba(95,193,219,.2); border-radius: 10px; padding: 14px; background: rgba(9,16,30,.58); }
+    .perk-item { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(95,193,219,.14); }
+    .perk-item:first-of-type { border-top: 0; padding-top: 0; margin-top: 8px; }
+    .perk-item input[type='checkbox'] { width: 18px; height: 18px; margin-top: 2px; }
+    .perk-title { font-weight: 700; margin-bottom: 3px; }
+    .small { font-size: 12px; color: var(--muted); }
+    .footer-note { color: var(--ark-text-dim); font-size: 12px; margin-top: 12px; line-height: 1.45; }
+    .combat-box { border: 1px solid rgba(95,193,219,.18); border-radius: 10px; background: linear-gradient(180deg, rgba(8,18,28,.6), rgba(5,12,22,.5)); padding: 14px; margin-top: 14px; }
+    .combat-box h3 { margin: 0 0 12px; font-size: 15px; color: var(--ark-cyan); }
+    .inventory-table-wrap { border: 1px solid rgba(95,193,219,.2); border-radius: 10px; background: rgba(8,14,26,.5); overflow: auto; max-height: 430px; }
+    .inventory-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    .inventory-table th, .inventory-table td { border-bottom: 1px solid rgba(66,89,139,.45); padding: 10px; text-align: left; vertical-align: middle; }
+    .inventory-table th { position: sticky; top: 0; background: #0a1522; color: var(--ark-cyan); font-size: 12px; text-transform: uppercase; letter-spacing: .45px; z-index: 1; }
+    .inventory-table td { background: rgba(7,15,24,.7); }
+    .slot-badge { display: inline-flex; min-width: 30px; justify-content: center; align-items: center; padding: 6px 10px; border-radius: 8px; background: rgba(95,193,219,.12); border: 1px solid rgba(95,193,219,.24); font-size: 12px; color: #dff8ff; }
+    .left-header-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+    .left-header-box {
+      background: rgba(9,22,35,.95); border: 1px solid rgba(95,193,219,.2);
+      border-radius: 10px; padding: 16px; min-height: 116px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .left-header-box label { font-size: 10px; min-height: 0; margin-bottom: 10px; }
+    .left-header-box input {
+      min-height: 52px; font-size: 22px; font-weight: 700; text-align: center; padding: 12px 14px;
+      background: linear-gradient(180deg, rgba(18,30,55,.98), rgba(10,18,34,.98));
+      border: 1px solid rgba(121,168,255,.72);
+      box-shadow: 0 0 0 1px rgba(121,168,255,.08), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .left-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .left-metrics .metric { min-height: 0; }
+    .left-metrics .metric .value { font-size: 24px; }
+    .layout-wide { margin-top: 18px; display: grid; gap: 18px; }
+    .wide-card { max-width: 1600px; margin: 0 auto; }
+    .perks-shell { display: flex; justify-content: center; }
+    .perks-inner { width: min(100%,1280px); }
+    .notes-stack { display: grid; gap: 16px; width: min(100%,1280px); margin: 0 auto; }
+    .section-title-horizontal { writing-mode: horizontal-tb; transform: none; min-height: auto; display: block; font-size: 15px; color: var(--ark-cyan); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; text-align: left; margin-bottom: 16px; border-bottom: 1px solid rgba(94,218,255,.16); padding-bottom: 8px; }
+    .level-highlight { background: linear-gradient(180deg, rgba(34,65,77,.96), rgba(11,24,32,.98)); border-color: rgba(145,238,255,.35); }
+    .compact-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+    .compact-metrics .metric { padding: 10px 11px; border-radius: 10px; min-height: 0; }
+    .attack-summary-grid { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+    .attack-summary-grid .metric { min-height: 0; padding: 13px 14px; }
+    .attack-summary-grid .metric .name { font-size: 11px; min-height: 28px; display: block; }
+    select { background: linear-gradient(180deg, rgba(10,25,39,.96), rgba(6,15,25,.98)) !important; color: #ecfbff !important; border: 1px solid rgba(95,193,219,.28) !important; }
+    select option { background: #0a1522 !important; color: #ecfbff !important; }
+    select optgroup { background: #0a1522 !important; color: #7de7ff !important; }
+
+    /* TABS */
+    .tabs-shell { margin-bottom: 14px; padding: 10px; border: 1px solid var(--ark-line); border-radius: 14px; background: linear-gradient(180deg, rgba(8,19,31,.88), rgba(5,12,20,.92)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.02), 0 0 22px rgba(0,210,255,.06); }
+    .tabs-header { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .tabs-title { color: var(--ark-text-dim); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+    .tabs-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .tab-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; max-width: 240px; padding: 8px 10px 8px 12px; border-radius: 10px; border: 1px solid rgba(105,223,255,.24); background: linear-gradient(180deg, rgba(10,25,39,.98), rgba(6,15,25,.98)); color: #dff8ff; cursor: pointer; }
+    .tab-btn.active { border-color: rgba(145,238,255,.5); box-shadow: 0 0 14px rgba(0,210,255,.12); background: linear-gradient(180deg, rgba(18,47,65,.98), rgba(8,22,35,.98)); }
+    .tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tab-close { flex: 0 0 auto; width: 24px; height: 24px; min-height: 24px; padding: 0; border-radius: 7px; border: 1px solid rgba(105,223,255,.18); background: rgba(255,255,255,.04); color: #dff8ff; font-size: 14px; line-height: 1; }
+    .tab-add-btn { min-width: 42px; min-height: 40px; padding: 0 14px; font-size: 20px; line-height: 1; }
+
+    /* MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(2,8,14,.78); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+    .modal-overlay.hidden { display: none; }
+    .modal-box { width: min(100%,520px); background: linear-gradient(180deg, rgba(8,19,31,.98), rgba(5,12,20,1)); border: 1px solid rgba(105,223,255,.28); border-radius: 16px; box-shadow: 0 0 30px rgba(0,210,255,.12); padding: 22px; }
+    .modal-box h3 { margin: 0 0 14px; font-size: 20px; text-transform: uppercase; letter-spacing: .05em; color: var(--ark-cyan); }
+    .modal-box p { margin: 0; font-size: 15px; line-height: 1.7; color: #d9f6ff; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+    .modal-actions button { min-width: 130px; }
+    .modal-option-list { display: grid; gap: 10px; margin-top: 14px; }
+    .modal-option { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; padding: 12px; border: 1px solid rgba(95,193,219,.2); border-radius: 12px; background: linear-gradient(180deg, rgba(9,22,35,.95), rgba(6,15,25,.98)); }
+    .modal-option input[type="radio"], .modal-option input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; }
+    .modal-option strong, .modal-section-title { color: var(--ark-cyan); }
+    .modal-section { margin-top: 18px; }
+    .checklist-box { display: grid; gap: 8px; margin-top: 10px; max-height: 240px; overflow: auto; padding-right: 4px; }
+    .checklist-item { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid rgba(95,193,219,.16); border-radius: 10px; background: rgba(7,15,24,.7); }
+    .checklist-item.disabled { opacity: .5; }
+
+    /* POSTURA */
+    .postura-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+    .postura-btn { min-height: 44px; border-radius: 10px; font-size: 12px; }
+    .postura-btn.active-postura { border-color: rgba(125,231,255,.7); box-shadow: 0 0 12px rgba(0,210,255,.2); background: linear-gradient(180deg, rgba(18,47,65,.98), rgba(8,22,35,.98)); }
+
+    /* RESPONSIVE */
+    @media (max-width: 1280px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 1200px) {
+      .attr { grid-template-columns: minmax(0,1fr) minmax(88px,112px) minmax(0,1fr); }
+      .attr .mini { grid-column: 1/-1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+    }
+    @media (max-width: 900px) {
+      .attr { grid-template-columns: 1fr; }
+      .metric { grid-template-columns: 1fr; }
+      .metric .value, .metric .sub { text-align: left; }
+    }
+    @media (max-width: 720px) {
+      .row,.row-3,.row-4,.stat-grid,.metric-grid,.resource-box,.left-header-grid,.left-metrics { grid-template-columns: 1fr; }
+      .left-header-box { min-height: auto; }
+      .wrap { padding: 14px; }
+      h1 { font-size: 20px; }
+      .perk-grid { grid-template-columns: 1fr; }
+    }
+    @media print {
+      #readonly-banner, #save-indicator, .topbar-back, #sheet-topbar-actions { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════════ -->
+<div id="login-screen" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">ARK RPG</div>
+    <div class="login-tagline">Sistema de fichas online — acesso por convite</div>
+    <button class="btn-google" onclick="signIn()">
+      <svg width="20" height="20" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Entrar com Google
+    </button>
+    <div class="login-note">Somente contas autorizadas pelo administrador terão acesso.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DASHBOARD SCREEN
+═══════════════════════════════════════ -->
+<div id="dashboard-screen" class="screen">
+  <div class="dash-topbar">
+    <div class="dash-logo">⚔ ARK RPG</div>
+    <div id="dash-viewing-own" style="display:none;">
+      <button class="dash-btn dash-btn-own" onclick="goToOwnSheet()">Minha Ficha</button>
+    </div>
+    <div class="dash-actions">
+      <button class="dash-btn dash-btn-admin" id="btn-admin-panel" style="display:none;" onclick="showAdminPanel()">⚙ Admin</button>
+      <button class="dash-btn dash-btn-danger" onclick="signOut()">Sair</button>
+    </div>
+    <div class="dash-user">
+      <img id="dash-avatar" class="dash-avatar" src="" alt="" />
+      <div>
+        <div class="dash-name" id="dash-name"></div>
+        <span class="role-badge" id="dash-role-badge"></span>
+      </div>
+    </div>
+  </div>
+  <div class="dash-body">
+    <div class="dash-section-title" id="dash-section-label">Fichas dos jogadores</div>
+    <div class="player-grid" id="player-grid"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ADMIN SCREEN
+═══════════════════════════════════════ -->
+<div id="admin-screen" class="screen">
+  <div class="dash-topbar">
+    <div class="dash-logo">⚔ ARK RPG — Admin</div>
+    <div class="dash-actions">
+      <button class="dash-btn" onclick="showDashboard()">← Voltar</button>
+      <button class="dash-btn dash-btn-danger" onclick="signOut()">Sair</button>
+    </div>
+    <div class="dash-user">
+      <img id="admin-avatar" class="dash-avatar" src="" alt="" />
+      <div><div class="dash-name" id="admin-name"></div><span class="role-badge role-admin">Admin</span></div>
+    </div>
+  </div>
+  <div class="dash-body admin-body">
+    <div class="admin-title">⚙ Gerenciar Roles</div>
+    <div class="admin-note" style="margin-bottom:20px;">Defina quem é Mestre (visualiza todas as fichas) e quem é Jogador. O Admin tem controle total.</div>
+    <div id="users-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET SCREEN
+═══════════════════════════════════════ -->
+<div id="sheet-screen" class="screen">
+  <div id="readonly-banner">👁 Modo somente leitura — visualização da ficha de <span id="viewing-player-name"></span></div>
+  <div id="save-indicator">Salvando...</div>
+
+  <div class="wrap">
+    <div class="topbar" id="sheet-topbar">
+      <div class="topbar-left">
+        <button class="topbar-back" id="btn-back-to-dash" style="display:none;" onclick="backToDashboard()">← Voltar</button>
+        <div>
+          <h1>Ficha Automatizada • ARK RPG</h1>
+          <div class="subtitle" id="sheet-subtitle">Salva automaticamente na nuvem.</div>
+        </div>
+      </div>
+      <div class="actions" id="sheet-topbar-actions">
+        <button id="exportBtn">Exportar</button>
+        <button id="importBtn">Importar</button>
+        <button id="printBtn">Imprimir / PDF</button>
+        <button class="btn-danger" id="resetBtn">Limpar ficha</button>
+        <button class="dash-btn dash-btn-danger" onclick="signOut()" style="margin-left:8px;">Sair</button>
+      </div>
+    </div>
+
+    <div class="tabs-shell">
+      <div class="tabs-header">
+        <div class="tabs-title">Fichas abertas</div>
+        <div class="tabs-bar" id="tabsBar"></div>
+        <button type="button" class="tab-add-btn" id="addTabBtn" title="Nova ficha">+</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- COLUNA 1 -->
+      <div class="card">
+        <h2 class="section-title-horizontal">Identidade e atributos</h2>
+        <div class="row">
+          <div><label for="nome">Nome</label><input id="nome" data-save placeholder="Nome do personagem" /></div>
+          <div><label for="jogador">Jogador</label><input id="jogador" data-save placeholder="Nome do jogador" /></div>
+          <div><label for="tribo">Tribo / grupo</label><input id="tribo" data-save placeholder="Grupo, tribo ou facção" /></div>
+          <div><label for="origem">Origem</label><input id="origem" data-save placeholder="Origem, profissão ou conceito" /></div>
+        </div>
+        <div class="left-header-grid section-space">
+          <div class="left-header-box level-highlight"><label for="nivel">Nível</label><input id="nivel" data-save type="number" min="1" value="1" /></div>
+          <div class="left-header-box"><label for="pontosPorNivel">Pontos por nível</label><input id="pontosPorNivel" type="number" value="5" readonly /></div>
+          <div class="left-header-box"><label for="bonusPontos">Ajuste manual de pontos</label><input id="bonusPontos" data-save type="number" value="0" /></div>
+          <div class="left-header-box"><label for="perkBonus">Ajuste manual de perks</label><input id="perkBonus" data-save type="number" value="0" /></div>
+        </div>
+        <div class="metric-grid left-metrics section-space">
+          <div class="metric"><div class="name">Pontos totais</div><div class="value" id="pontosTotais">0</div><div class="sub">nível × pontos + ajuste</div></div>
+          <div class="metric"><div class="name">Pontos gastos</div><div class="value" id="pontosGastos">0</div><div class="sub">soft cap: 50+ custa 2, 80+ custa 3</div></div>
+          <div class="metric"><div class="name">Pontos restantes</div><div class="value" id="pontosRestantes">0</div><div class="sub" id="pontosStatus">disponível</div></div>
+          <div class="metric"><div class="name">Perks totais</div><div class="value" id="perkTotal">0</div><div class="sub">1 a cada 5 níveis + ajuste</div></div>
+          <div class="metric"><div class="name">Perks marcadas</div><div class="value" id="perkUsed">0</div><div class="sub">requisitos por atributo</div></div>
+          <div class="metric"><div class="name">Perks restantes</div><div class="value" id="perkLeft">0</div><div class="sub" id="perkStatus">disponível</div></div>
+        </div>
+        <div class="section-space">
+          <h2>Atributos</h2>
+          <div class="stat-grid">
+            <div class="attr"><div class="attr-head attr-head-center"><strong>Força</strong><div class="attr-sub">+2% dano físico / ponto</div></div><input id="forca" data-save class="attr-input" type="number" min="0" max="100" value="0" /><div class="mini"><div><label>Custo total</label><input id="forcaCost" readonly /></div><div><label>Bônus</label><input id="forcaInfo" readonly /></div></div></div>
+            <div class="attr"><div class="attr-head attr-head-center"><strong>Constituição</strong><div class="attr-sub">+10 HP / ponto</div></div><input id="constituicao" data-save class="attr-input" type="number" min="0" max="100" value="0" /><div class="mini"><div><label>Custo total</label><input id="constituicaoCost" readonly /></div><div><label>Bônus</label><input id="constituicaoInfo" readonly /></div></div></div>
+            <div class="attr"><div class="attr-head attr-head-center"><strong>Destreza</strong><div class="attr-sub">mov., esquiva e distância</div></div><input id="destreza" data-save class="attr-input" type="number" min="0" max="100" value="0" /><div class="mini"><div><label>Custo total</label><input id="destrezaCost" readonly /></div><div><label>Bônus</label><input id="destrezaInfo" readonly /></div></div></div>
+            <div class="attr"><div class="attr-head attr-head-center"><strong>Inteligência</strong><div class="attr-sub">crafting</div></div><input id="inteligencia" data-save class="attr-input" type="number" min="0" max="100" value="0" /><div class="mini"><div><label>Custo total</label><input id="inteligenciaCost" readonly /></div><div><label>Bônus</label><input id="inteligenciaInfo" readonly /></div></div></div>
+            <div class="attr"><div class="attr-head attr-head-center"><strong>Sabedoria</strong><div class="attr-sub">percepção e oxigênio</div></div><input id="sabedoria" data-save class="attr-input" type="number" min="0" max="100" value="0" /><div class="mini"><div><label>Custo total</label><input id="sabedoriaCost" readonly /></div><div><label>Bônus</label><input id="sabedoriaInfo" readonly /></div></div></div>
+            <div class="attr"><div class="attr-head attr-head-center"><strong>Carisma</strong><div class="attr-sub">interações e liderança</div></div><input id="carisma" data-save class="attr-input" type="number" min="0" max="100" value="0" /><div class="mini"><div><label>Custo total</label><input id="carismaCost" readonly /></div><div><label>Bônus</label><input id="carismaInfo" readonly /></div></div></div>
+            <div class="attr"><div class="attr-head attr-head-center"><strong>Peso</strong><div class="attr-sub">+10 kg / ponto</div></div><input id="peso" data-save class="attr-input" type="number" min="0" max="100" value="0" /><div class="mini"><div><label>Custo total</label><input id="pesoCost" readonly /></div><div><label>Bônus</label><input id="pesoInfo" readonly /></div></div></div>
+            <div class="attr"><div class="attr-head attr-head-center"><strong>Resistência</strong><div class="attr-sub">stamina e regen</div></div><input id="resistencia" data-save class="attr-input" type="number" min="0" max="100" value="0" /><div class="mini"><div><label>Custo total</label><input id="resistenciaCost" readonly /></div><div><label>Bônus</label><input id="resistenciaInfo" readonly /></div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUNA 2 -->
+      <div class="card">
+        <h2>Recursos e derivados</h2>
+        <div class="metric-grid compact-metrics">
+          <div class="metric"><div class="name">Vida máxima</div><div class="value" id="vidaMax">100</div><div class="sub" id="vidaRegen"></div></div>
+          <div class="metric"><div class="name">Torpor máximo</div><div class="value" id="torporMax">100</div><div class="sub" id="torporInfo"></div></div>
+          <div class="metric"><div class="name">Stamina máxima</div><div class="value" id="staminaMax">100</div><div class="sub" id="staminaRegen"></div></div>
+          <div class="metric"><div class="name">Andar</div><div class="value" id="andarVal">5 m</div><div class="sub">corrida = 2× andar</div></div>
+          <div class="metric"><div class="name">Correr</div><div class="value" id="correrVal">10 m</div><div class="sub" id="pesoPenalty"></div></div>
+          <div class="metric"><div class="name">Esquiva base</div><div class="value" id="esquivaVal">0</div><div class="sub">d100/2 + destreza/2</div></div>
+          <div class="metric"><div class="name">Furtividade</div><div class="value" id="furtividadeVal">0</div><div class="sub">base 0 + destreza</div></div>
+          <div class="metric"><div class="name">Percepção</div><div class="value" id="percepcaoVal">10</div><div class="sub" id="zonaPercepcao"></div></div>
+          <div class="metric"><div class="name">Oxigênio</div><div class="value" id="oxigenioVal">60 s</div><div class="sub">+5 s por ponto de sabedoria</div></div>
+          <div class="metric"><div class="name">Capacidade de carga</div><div class="value" id="capacidadeVal">50 kg</div><div class="sub">acima de 100% fica imóvel</div></div>
+          <div class="metric"><div class="name">Dano físico</div><div class="value" id="danoFisicoVal">+0%</div><div class="sub">força</div></div>
+          <div class="metric"><div class="name">Dano à distância</div><div class="value" id="danoDistVal">+0%</div><div class="sub">destreza</div></div>
+          <div class="metric"><div class="name">Crafting</div><div class="value" id="craftVelVal">+0%</div><div class="sub" id="craftQualVal">qualidade +0%</div></div>
+        </div>
+
+        <div class="section-space">
+          <h2>Recursos atuais</h2>
+          <div class="resource-box">
+            <div><label>Vida atual</label><input id="vidaAtual" data-save type="number" min="0" value="100" /></div>
+            <div><label>Máxima</label><input id="vidaAtualMax" readonly /></div>
+            <div><label>Variação</label><input id="vidaDelta" type="number" value="0" /></div>
+            <div class="resource-main-action"><button onclick="applyDelta('vida')">Aplicar</button></div>
+            <div class="resource-side-action"><button id="recoverHpBtn">Regenerar</button></div>
+          </div>
+          <div class="progress"><div class="bar hp" id="vidaBar"></div></div>
+
+          <div class="resource-box section-space">
+            <div><label>Torpor atual</label><input id="torporAtual" data-save type="number" min="0" value="0" /></div>
+            <div><label>Máximo</label><input id="torporAtualMax" readonly /></div>
+            <div><label>Variação</label><input id="torporDelta" type="number" value="0" /></div>
+            <div class="resource-main-action"><button onclick="applyDelta('torpor')">Aplicar</button></div>
+            <div class="resource-side-action"><button id="dropTorporBtn">Reduzir</button></div>
+          </div>
+          <div class="progress"><div class="bar torpor" id="torporBar"></div></div>
+
+          <div class="resource-box section-space">
+            <div><label>Stamina atual</label><input id="staminaAtual" data-save type="number" min="0" value="100" /></div>
+            <div><label>Máxima</label><input id="staminaAtualMax" readonly /></div>
+            <div><label>Variação</label><input id="staminaDelta" type="number" value="0" /></div>
+            <div class="resource-main-action"><button onclick="applyDelta('stamina')">Aplicar</button></div>
+            <div class="resource-side-action"><button id="recoverStaminaBtn">Regenerar</button></div>
+          </div>
+          <div class="progress"><div class="bar stamina" id="staminaBar"></div></div>
+
+          <div class="resource-box section-space">
+            <div><label>Peso carregado total</label><input id="pesoAtual" readonly /></div>
+            <div><label>Capacidade</label><input id="pesoAtualMax" readonly /></div>
+            <div><label>Uso %</label><input id="pesoUso" readonly /></div>
+            <div class="resource-main-action"><button type="button" onclick="updateAll()">Atualizar</button></div>
+            <div class="resource-side-action"><button type="button" onclick="document.getElementById('inventoryBody').scrollIntoView({behavior:'smooth',block:'center'})">Inventário</button></div>
+          </div>
+          <div class="progress"><div class="bar peso" id="pesoBar"></div></div>
+        </div>
+
+        <div class="section-space">
+          <h2>Inventário e peso</h2>
+          <div class="metric-grid">
+            <div class="metric"><div class="name">Espaços do personagem</div><div class="value" id="inventarioSlotsTotal">5</div><div class="sub">5 base + 1 por ponto em Peso</div></div>
+            <div class="metric"><div class="name">Espaços usados</div><div class="value" id="inventarioSlotsUsados">0</div><div class="sub">linha com descrição conta como usada</div></div>
+            <div class="metric"><div class="name">Espaços livres</div><div class="value" id="inventarioSlotsLivres">5</div><div class="sub">itens soltos no personagem</div></div>
+          </div>
+          <div class="inventory-table-wrap section-space">
+            <table class="inventory-table">
+              <thead><tr><th>Espaço</th><th>Descrição do item</th><th>Quantidade</th><th>Peso unitário</th><th>Peso total</th></tr></thead>
+              <tbody id="inventoryBody"></tbody>
+            </table>
+          </div>
+
+          <div class="row section-space">
+            <div><label for="mochilaAtiva">Mochila equipada</label><select id="mochilaAtiva" data-save><option value="nao">Não</option><option value="sim">Sim</option></select></div>
+            <div id="mochilaSlotsBox" style="display:none;"><label for="mochilaSlots">Slots adicionais da mochila</label><select id="mochilaSlots" data-save><option value="5">5</option><option value="10" selected>10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option></select></div>
+          </div>
+          <div id="mochilaSection" class="section-space" style="display:none;">
+            <div class="metric-grid">
+              <div class="metric"><div class="name">Slots da mochila</div><div class="value" id="mochilaSlotsTotal">0</div><div class="sub">configurado acima</div></div>
+              <div class="metric"><div class="name">Slots usados</div><div class="value" id="mochilaSlotsUsados">0</div><div class="sub">linha com descrição</div></div>
+              <div class="metric"><div class="name">Slots livres</div><div class="value" id="mochilaSlotsLivres">0</div><div class="sub">disponível na mochila</div></div>
+            </div>
+            <div class="inventory-table-wrap section-space">
+              <table class="inventory-table">
+                <thead><tr><th>Slot</th><th>Descrição do item</th><th>Quantidade</th><th>Peso unitário</th><th>Peso total</th></tr></thead>
+                <tbody id="backpackBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-space">
+          <h2>Postura de combate</h2>
+          <div class="postura-grid">
+            <button class="postura-btn" data-postura="neutra"  onclick="setPostura('neutra')">Neutra</button>
+            <button class="postura-btn" data-postura="ofensiva" onclick="setPostura('ofensiva')">Ofensiva</button>
+            <button class="postura-btn" data-postura="defensiva" onclick="setPostura('defensiva')">Defensiva</button>
+            <button class="postura-btn" data-postura="esquiva"  onclick="setPostura('esquiva')">Esquiva</button>
+            <button class="postura-btn" data-postura="furtiva"  onclick="setPostura('furtiva')">Furtiva</button>
+          </div>
+          <input type="hidden" id="posturaAtual" data-save value="neutra" />
+          <div class="footer-note" id="posturaResumo"></div>
+        </div>
+      </div>
+
+      <!-- COLUNA 3 -->
+      <div class="card">
+        <h2>Combate, armas e observações</h2>
+        <div class="row">
+          <div><label for="armaNome">Arma atual</label><input id="armaNome" data-save value="Soco" /></div>
+          <div><label for="armaDado">Dado da arma</label><input id="armaDado" data-save value="1d4" /></div>
+          <div><label for="armaEscala">Dano com base em</label><select id="armaEscala" data-save><option value="forca">Força</option><option value="destreza">Destreza</option><option value="nenhum">Nenhum</option></select></div>
+          <div><label for="armaBonus">Bônus fixo da arma</label><input id="armaBonus" data-save type="number" value="0" /></div>
+        </div>
+        <div class="row-4 section-space">
+          <div><label for="armadura">Armadura</label><select id="armadura" data-save><option value="sem">Sem armadura</option><option value="leve">Armadura leve</option><option value="media">Armadura média</option><option value="pesada">Armadura pesada</option></select></div>
+          <div><label for="armaduraBonus">Bônus de armadura</label><input id="armaduraBonus" data-save type="number" value="0" /></div>
+          <div></div><div></div>
+        </div>
+
+        <div class="combat-box">
+          <h3>Cálculo de dano causado</h3>
+          <div class="row">
+            <div><label for="rolagemD20">Resultado do d20</label><input id="rolagemD20" type="number" min="1" max="20" value="11" /></div>
+            <div><label for="danoBaseRolado">Dano rolado no dado da arma</label><input id="danoBaseRolado" type="number" min="0" value="1" /></div>
+            <div><label for="bonusPercentualExtra">Adicional percentual de dano (%)</label><input id="bonusPercentualExtra" type="number" value="0" /></div>
+            <div><label for="efeitoExtra">Bônus fixo situacional</label><input id="efeitoExtra" type="number" value="0" /></div>
+          </div>
+          <div class="row section-space">
+            <div><label for="tamanhoAlvo">Tamanho do alvo</label><select id="tamanhoAlvo"><option value="normal">Normal</option><option value="grande">Criatura grande</option></select></div>
+            <div><label for="reducaoArmaduraAlvo">Redução da armadura do alvo (%)</label><input id="reducaoArmaduraAlvo" type="number" min="0" max="100" value="0" /></div>
+            <div><label for="danoAplicadoAlvo">PV do alvo antes do golpe</label><input id="danoAplicadoAlvo" type="number" min="0" value="0" /></div>
+            <div><label for="vidaRestanteAlvo">PV do alvo após o golpe</label><input id="vidaRestanteAlvo" readonly /></div>
+          </div>
+          <div class="actions section-space"><button class="btn-accent" id="applyDamageToTargetBtn">Aplicar dano no alvo</button></div>
+          <div class="metric-grid section-space attack-summary-grid">
+            <div class="metric"><div class="name">Escalonamento</div><div class="value" id="armaScaleValue">+0</div><div class="sub" id="armaScaleText"></div></div>
+            <div class="metric"><div class="name">Multiplicador d20</div><div class="value" id="multiD20">100%</div><div class="sub">1-3=30%, 4-10=50%, 11-17=100%, 18-19=150%, 20=200%</div></div>
+            <div class="metric"><div class="name">Percentual total</div><div class="value" id="percentualTotalDano">+0%</div><div class="sub">atributo + adicional + perks</div></div>
+            <div class="metric"><div class="name">Dano bruto</div><div class="value" id="danoBruto">0</div><div class="sub">(dado + fixos) × multiplicadores</div></div>
+            <div class="metric"><div class="name">Dano final no alvo</div><div class="value" id="danoFinal">0</div><div class="sub">com redução da armadura</div></div>
+            <div class="metric"><div class="name">Resumo</div><div class="value" id="ataqueResumo">Pronto</div><div class="sub">ajuste manual livre</div></div>
+          </div>
+        </div>
+
+        <div class="combat-box">
+          <h3>Cálculo de dano recebido</h3>
+          <div class="row">
+            <div><label for="danoRecebidoBruto">Dano bruto recebido</label><input id="danoRecebidoBruto" type="number" min="0" value="0" /></div>
+            <div><label for="reducaoArmaduraRecebida">Redução usada (%)</label><input id="reducaoArmaduraRecebida" readonly /></div>
+            <div><label for="danoRecebidoFinal">Dano final após redução</label><input id="danoRecebidoFinal" readonly /></div>
+            <div><label for="vidaAposDanoRecebido">Vida após dano</label><input id="vidaAposDanoRecebido" readonly /></div>
+          </div>
+          <div class="actions section-space"><button class="btn-danger" id="applyReceivedDamageBtn">Descontar dano da vida</button></div>
+          <div class="footer-note">Leva em conta a redução da armadura e a postura atual.</div>
+        </div>
+
+        <div class="combat-box" id="esquivaBox" style="display:none;">
+          <h3>Quadro de esquiva</h3>
+          <div class="row">
+            <div><label for="rolagemEsquiva">Resultado do d100</label><input id="rolagemEsquiva" type="number" min="1" max="100" value="1" /></div>
+            <div><label for="penalidadeEsquiva">Penalidade manual</label><input id="penalidadeEsquiva" type="number" value="0" /></div>
+            <div><label for="formulaEsquiva">Resultado da fórmula</label><input id="formulaEsquiva" readonly /></div>
+            <div><label for="danoEsquivado">Dano esquivado</label><input id="danoEsquivado" readonly /></div>
+          </div>
+          <div class="footer-note">Armadura leve: d100/2 + destreza/2. Média: d100/4 + destreza/4. Pesada: não desvia.</div>
+        </div>
+
+        <div class="metric-grid section-space">
+          <div class="metric"><div class="name">Esquiva estimada</div><div class="value" id="esquivaCalc">0</div><div class="sub">conforme armadura atual</div></div>
+        </div>
+      </div>
+    </div><!-- /grid -->
+
+    <div class="layout-wide">
+      <div class="card wide-card perks-shell">
+        <div class="perks-inner">
+          <h2>Perks</h2>
+          <div class="footer-note">As perks ficam centralizadas aqui para leitura e marcação mais confortável.</div>
+          <div class="section-space"><div class="perk-grid" id="perkGrid"></div></div>
+        </div>
+      </div>
+
+      <div class="card wide-card">
+        <div class="notes-stack">
+          <div><h2>Anotações</h2></div>
+          <div><label for="equipamentos">Equipamentos</label><textarea id="equipamentos" data-save placeholder="Armas, armaduras, ferramentas, munição..."></textarea></div>
+          <div><label for="criaturas">Criaturas / domados</label><textarea id="criaturas" data-save placeholder="Nome da criatura, função, sela, comandos..."></textarea></div>
+          <div><label for="notas">Notas gerais</label><textarea id="notas" data-save placeholder="Missões, acordos, observações, regras da mesa..."></textarea></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /wrap -->
+
+  <!-- MODALS -->
+  <div id="closeTabModal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <h3>Fechar aba</h3>
+      <p id="closeTabMessage">Você tem certeza?</p>
+      <div class="modal-actions">
+        <button type="button" id="cancelCloseTabBtn">Cancelar</button>
+        <button type="button" id="confirmCloseTabBtn" class="btn-danger">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="exportModal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <h3>Exportar JSON</h3>
+      <div class="footer-note">Escolha como exportar. O JSON salva apenas os dados preenchidos.</div>
+      <div class="modal-option-list">
+        <label class="modal-option"><input type="radio" name="exportMode" value="active" checked /><div><strong>Apenas a aba atual</strong><div class="small">Gera um JSON da ficha aberta.</div></div></label>
+        <label class="modal-option"><input type="radio" name="exportMode" value="workspace" /><div><strong>Arquivo completo</strong><div class="small">Todas as abas em um JSON.</div></div></label>
+        <label class="modal-option"><input type="radio" name="exportMode" value="selected-separate" /><div><strong>Abas separadas</strong><div class="small">Um JSON para cada aba marcada.</div></div></label>
+      </div>
+      <div class="modal-section"><div class="modal-section-title">Abas para exportação separada</div><div id="exportTabsChecklist" class="checklist-box"></div></div>
+      <div class="modal-actions"><button type="button" id="cancelExportBtn">Cancelar</button><button type="button" id="confirmExportBtn" class="btn-accent">Exportar</button></div>
+    </div>
+  </div>
+
+  <div id="importModal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <h3>Importar JSON</h3>
+      <div class="modal-option-list">
+        <label class="modal-option"><input type="radio" name="importMode" value="append" checked /><div><strong>Importar em abas novas</strong><div class="small">Mantém tudo e cria novas abas.</div></div></label>
+        <label class="modal-option"><input type="radio" name="importMode" value="replace" /><div><strong>Substituir tudo</strong><div class="small">Apaga todas as abas atuais.</div></div></label>
+      </div>
+      <div class="modal-actions"><button type="button" id="cancelImportBtn">Cancelar</button><button type="button" id="chooseImportFileBtn" class="btn-accent">Escolher arquivo</button></div>
+    </div>
+  </div>
+
+  <div id="replaceImportModal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <h3>Confirmar importação completa</h3>
+      <p>Ao importar uma ficha completa, os dados antigos serão perdidos permanentemente.</p>
+      <div class="modal-actions"><button type="button" id="cancelReplaceImportBtn">Cancelar</button><button type="button" id="confirmReplaceImportBtn" class="btn-danger">Confirmar</button></div>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" accept="application/json" style="display:none" />
+</div><!-- /sheet-screen -->
+
+<!-- ══════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════ -->
+<script>
+  /* ─── FIREBASE INIT ─── */
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
+  const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+  /* ─── APP STATE ─── */
+  let currentUser   = null;
+  let currentRole   = null;
+  let viewingUid    = null;   // uid being viewed by master/admin
+  let isReadOnly    = false;
+  let saveTimer     = null;
+  let sheetInitialized = false;
+
+  /* ─── SCREEN MANAGER ─── */
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id + '-screen').classList.add('active');
+  }
+
+  /* ─── AUTH ─── */
+  function signIn()  { auth.signInWithPopup(googleProvider); }
+  function signOut() { auth.signOut().then(() => { currentUser = null; currentRole = null; showScreen('login'); }); }
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) { showScreen('login'); return; }
+    currentUser = user;
+    try {
+      const userRef = db.collection('users').doc(user.uid);
+      const snap    = await userRef.get();
+
+      if (!snap.exists) {
+        const role = user.email === ADMIN_EMAIL ? 'admin' : 'player';
+        await userRef.set({
+          uid: user.uid, email: user.email,
+          displayName: user.displayName || user.email,
+          photoURL: user.photoURL || '',
+          role, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        currentRole = role;
+      } else {
+        currentRole = snap.data().role;
+        await userRef.update({ displayName: user.displayName || user.email, photoURL: user.photoURL || '' });
+      }
+
+      if (currentRole === 'player') {
+        await initSheetForUser(user.uid, false);
+        showScreen('sheet');
+      } else {
+        await loadDashboard();
+        showScreen('dashboard');
+      }
+    } catch (err) {
+      console.error('Auth error:', err);
+      alert('Erro ao autenticar. Verifique a configuração do Firebase.');
+    }
+  });
+
+  /* ─── DASHBOARD ─── */
+  async function loadDashboard() {
+    const u = currentUser;
+    document.getElementById('dash-avatar').src = u.photoURL || '';
+    document.getElementById('dash-name').textContent = u.displayName || u.email;
+    const badge = document.getElementById('dash-role-badge');
+    badge.textContent = currentRole === 'admin' ? 'Admin' : 'Mestre';
+    badge.className = 'role-badge ' + (currentRole === 'admin' ? 'role-admin' : 'role-master');
+    document.getElementById('btn-admin-panel').style.display = currentRole === 'admin' ? '' : 'none';
+
+    const grid = document.getElementById('player-grid');
+    grid.innerHTML = '<div class="dash-empty">Carregando fichas...</div>';
+
+    // Load all non-admin users for master/admin view
+    let usersSnap;
+    try {
+      usersSnap = await db.collection('users').get();
+    } catch(e) {
+      grid.innerHTML = '<div class="dash-empty">Erro ao carregar jogadores. Verifique as regras do Firestore.</div>';
+      return;
+    }
+
+    const players = usersSnap.docs
+      .map(d => d.data())
+      .filter(u => u.role === 'player');
+
+    if (!players.length) {
+      grid.innerHTML = '<div class="dash-empty">Nenhum jogador ainda. Aguarde os players fazerem login.</div>';
+      return;
+    }
+
+    // Load sheet summaries
+    grid.innerHTML = '';
+    for (const player of players) {
+      const card = await buildPlayerCard(player);
+      grid.appendChild(card);
+    }
+  }
+
+  async function buildPlayerCard(player) {
+    const card = document.createElement('div');
+    card.className = 'player-card';
+    card.onclick = () => openPlayerSheet(player.uid, player.displayName);
+
+    let charName = '—', charLevel = '?', charHp = '?';
+    try {
+      const sheetSnap = await db.collection('sheets').doc(player.uid).get();
+      if (sheetSnap.exists) {
+        const ss = sheetSnap.data().sheetStore;
+        if (ss && ss.tabs && ss.tabs.length) {
+          const activeTab = ss.tabs.find(t => t.id === ss.activeId) || ss.tabs[0];
+          if (activeTab && activeTab.data) {
+            charName  = activeTab.data.nome  || activeTab.name || '—';
+            charLevel = activeTab.data.nivel || '1';
+            charHp    = activeTab.data.vidaAtual !== undefined ? activeTab.data.vidaAtual : '?';
+          }
+        }
+      }
+    } catch(e) {}
+
+    card.innerHTML = `
+      <div class="player-card-header">
+        <img class="player-card-avatar" src="${player.photoURL || ''}" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><rect width=%2240%22 height=%2240%22 fill=%22%230a1a2a%22/><text x=%2250%%22 y=%2255%%22 text-anchor=%22middle%22 fill=%22%237de7ff%22 font-size=%2218%22>?</text></svg>'" />
+        <div class="player-card-info">
+          <div class="player-card-name">${player.displayName || player.email}</div>
+          <div class="player-card-email">${player.email}</div>
+          <div class="player-card-char">⚔ ${charName}</div>
+        </div>
+      </div>
+      <div class="player-card-stats">
+        <div class="player-card-stat"><div class="label">Nível</div><div class="val">${charLevel}</div></div>
+        <div class="player-card-stat"><div class="label">HP</div><div class="val">${charHp}</div></div>
+        <div class="player-card-stat"><div class="label">Abas</div><div class="val">${(await getTabCount(player.uid))}</div></div>
+      </div>
+      <div class="player-card-action">→ Ver ficha completa</div>
+    `;
+    return card;
+  }
+
+  async function getTabCount(uid) {
+    try {
+      const snap = await db.collection('sheets').doc(uid).get();
+      if (snap.exists && snap.data().sheetStore && snap.data().sheetStore.tabs) return snap.data().sheetStore.tabs.length;
+    } catch(e) {}
+    return 0;
+  }
+
+  async function openPlayerSheet(uid, name) {
+    viewingUid = uid;
+    isReadOnly = true;
+    document.getElementById('viewing-player-name').textContent = name || uid;
+    document.getElementById('btn-back-to-dash').style.display = '';
+    document.getElementById('readonly-banner').classList.add('visible');
+    document.getElementById('sheet-topbar-actions').style.display = 'none';
+    document.getElementById('sheet-subtitle').textContent = `Visualizando ficha de ${name || uid} — somente leitura`;
+    await initSheetForUser(uid, true);
+    showScreen('sheet');
+  }
+
+  async function goToOwnSheet() {
+    viewingUid = null;
+    isReadOnly = false;
+    document.getElementById('readonly-banner').classList.remove('visible');
+    document.getElementById('btn-back-to-dash').style.display = 'none';
+    document.getElementById('sheet-topbar-actions').style.display = '';
+    document.getElementById('sheet-subtitle').textContent = 'Salva automaticamente na nuvem.';
+    await initSheetForUser(currentUser.uid, false);
+    showScreen('sheet');
+  }
+
+  function backToDashboard() {
+    viewingUid = null;
+    isReadOnly = false;
+    loadDashboard().then(() => showScreen('dashboard'));
+  }
+
+  function showDashboard() {
+    loadDashboard().then(() => showScreen('dashboard'));
+  }
+
+  /* ─── ADMIN PANEL ─── */
+  function showAdminPanel() {
+    document.getElementById('admin-avatar').src = currentUser.photoURL || '';
+    document.getElementById('admin-name').textContent = currentUser.displayName || currentUser.email;
+    loadUsersList().then(() => showScreen('admin'));
+  }
+
+  async function loadUsersList() {
+    const list = document.getElementById('users-list');
+    list.innerHTML = 'Carregando...';
+    const snap = await db.collection('users').get();
+    list.innerHTML = '';
+    snap.docs.forEach(doc => {
+      const u = doc.data();
+      if (u.uid === currentUser.uid) return; // skip self
+      const row = document.createElement('div');
+      row.className = 'user-row';
+      row.innerHTML = `
+        <img src="${u.photoURL || ''}" alt="" onerror="this.src=''" />
+        <div class="user-info">
+          <div class="uname">${u.displayName || u.email}</div>
+          <div class="uemail">${u.email}</div>
+        </div>
+        <select class="user-role-select" data-uid="${u.uid}">
+          <option value="player" ${u.role==='player'?'selected':''}>Jogador</option>
+          <option value="master" ${u.role==='master'?'selected':''}>Mestre</option>
+          <option value="admin"  ${u.role==='admin'?'selected':''}>Admin</option>
+        </select>
+        <button class="btn-save-role" onclick="saveUserRole('${u.uid}')">Salvar</button>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  async function saveUserRole(uid) {
+    const sel = document.querySelector(`[data-uid="${uid}"]`);
+    if (!sel) return;
+    try {
+      await db.collection('users').doc(uid).update({ role: sel.value });
+      alert('Role atualizado com sucesso!');
+    } catch(e) {
+      alert('Erro ao salvar. Verifique as regras do Firestore.');
+    }
+  }
+
+  /* ════════════════════════════════════════
+     SHEET ENGINE (adapted from v17)
+  ════════════════════════════════════════ */
+  const STORAGE_KEY        = 'ark-rpg-ficha-tabs-v1'; // kept for legacy compat
+  const DEFAULT_TAB_NAME   = 'Nova ficha';
+  let sheetStore           = { activeId: null, tabs: [] };
+  let pendingCloseTabId    = null;
+  let pendingImportMode    = 'append';
+
+  const closeTabModal      = document.getElementById('closeTabModal');
+  const exportModal        = document.getElementById('exportModal');
+  const importModal        = document.getElementById('importModal');
+  const replaceImportModal = document.getElementById('replaceImportModal');
+  const exportTabsChecklist = document.getElementById('exportTabsChecklist');
+
+  function uniqueId() { return `ficha_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`; }
+  function defaultTabName(i=1) { return `${DEFAULT_TAB_NAME} ${i}`; }
+  function makeBlankState() { return {}; }
+  function getActiveTab() { return sheetStore.tabs.find(t => t.id === sheetStore.activeId) || null; }
+  function byId(id) { return document.getElementById(id); }
+  function num(id) { const v = parseFloat(byId(id).value); return Number.isFinite(v) ? v : 0; }
+  function clamp(v,mn,mx) { return Math.min(mx, Math.max(mn, v)); }
+
+  /* ─── FIRESTORE SAVE (replaces localStorage) ─── */
+  function persistSheetStore() {
+    if (isReadOnly || !currentUser) return;
+    const ind = document.getElementById('save-indicator');
+    ind.textContent = '⏳ Salvando...';
+    ind.className = 'saving';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        await db.collection('sheets').doc(currentUser.uid).set({
+          ownerUid:   currentUser.uid,
+          ownerName:  currentUser.displayName || currentUser.email,
+          ownerEmail: currentUser.email,
+          ownerPhoto: currentUser.photoURL || '',
+          sheetStore: JSON.parse(JSON.stringify(sheetStore)),
+          updatedAt:  firebase.firestore.FieldValue.serverTimestamp()
+        });
+        ind.textContent = '✓ Salvo';
+        ind.className = 'saved';
+        setTimeout(() => { ind.className = ''; }, 2500);
+      } catch(e) {
+        console.error('Save error:', e);
+        ind.textContent = '✗ Erro ao salvar';
+        ind.className = 'saving';
+      }
+    }, 1800);
+  }
+
+  /* ─── SHEET INIT FROM FIRESTORE ─── */
+  async function initSheetForUser(uid, readonly) {
+    isReadOnly = readonly;
+    viewingUid = readonly ? uid : null;
+
+    try {
+      const snap = await db.collection('sheets').doc(uid).get();
+      if (snap.exists && snap.data().sheetStore) {
+        const stored = snap.data().sheetStore;
+        if (stored && Array.isArray(stored.tabs) && stored.tabs.length) {
+          sheetStore = stored;
+          if (!sheetStore.tabs.some(t => t.id === sheetStore.activeId)) sheetStore.activeId = sheetStore.tabs[0].id;
+        } else { initBlankSheetStore(); }
+      } else { initBlankSheetStore(); }
+    } catch(e) { initBlankSheetStore(); }
+
+    if (!sheetInitialized) {
+      createPerks();
+      sheetInitialized = true;
+    }
+    renderTabs();
+    const active = getActiveTab();
+    applyStateToForm(active ? active.data : {});
+    createInventoryRows(true);
+    updateAll();
+
+    if (readonly) applyReadOnlyMode();
+    else removeReadOnlyMode();
+  }
+
+  function initBlankSheetStore() {
+    const firstId = uniqueId();
+    sheetStore = { activeId: firstId, tabs: [{ id: firstId, name: defaultTabName(1), data: makeBlankState() }] };
+  }
+
+  function applyReadOnlyMode() {
+    document.querySelectorAll('#sheet-screen input:not([readonly]), #sheet-screen select, #sheet-screen textarea').forEach(el => {
+      el.setAttribute('data-was-enabled', '1');
+      el.disabled = true;
+    });
+    document.querySelectorAll('.tab-close, #addTabBtn, #resetBtn, #importBtn, .resource-side-action button, .resource-main-action button, #applyReceivedDamageBtn, #applyDamageToTargetBtn, #useActionBtn, .postura-btn').forEach(el => {
+      el.style.display = 'none';
+    });
+  }
+
+  function removeReadOnlyMode() {
+    document.querySelectorAll('[data-was-enabled]').forEach(el => {
+      el.disabled = false;
+      el.removeAttribute('data-was-enabled');
+    });
+    document.querySelectorAll('.tab-close, #addTabBtn, #resetBtn, #importBtn, .resource-side-action button, .resource-main-action button, #applyReceivedDamageBtn, #applyDamageToTargetBtn, .postura-btn').forEach(el => {
+      el.style.display = '';
+    });
+  }
+
+  /* ─── TAB MANAGEMENT ─── */
+  function normalizeTabName(name, fi=1) { return (String(name||'').trim()) || defaultTabName(fi); }
+
+  function renderTabs() {
+    const bar = byId('tabsBar');
+    if (!bar) return;
+    bar.innerHTML = '';
+    sheetStore.tabs.forEach((tab, i) => {
+      const btn = document.createElement('div');
+      btn.className = `tab-btn${tab.id === sheetStore.activeId ? ' active' : ''}`;
+      btn.dataset.tabId = tab.id;
+      btn.innerHTML = `<span class="tab-name">${normalizeTabName(tab.name, i+1)}</span><button type="button" class="tab-close" data-close-tab="${tab.id}" title="Fechar">×</button>`;
+      bar.appendChild(btn);
+    });
+  }
+
+  function captureCurrentState() {
+    const data = {};
+    document.querySelectorAll('[data-save]').forEach(el => {
+      if (el.type === 'checkbox') data[el.id || el.dataset.perk] = el.checked;
+      else data[el.id] = el.value;
+    });
+    return data;
+  }
+
+  function resetFormToBlank() {
+    document.querySelectorAll('[data-save]').forEach(el => {
+      if (el.type === 'checkbox') el.checked = false;
+      else if (el.type === 'number') el.value = el.defaultValue || '0';
+      else el.value = el.defaultValue || '';
+    });
+    createInventoryRows(true);
+  }
+
+  function applyStateToForm(data={}) {
+    resetFormToBlank();
+    document.querySelectorAll('[data-save]').forEach(el => {
+      const key = el.id || el.dataset.perk;
+      if (!(key in data)) return;
+      if (el.type === 'checkbox') el.checked = !!data[key];
+      else if (!el.hasAttribute('data-inventory')) el.value = data[key];
+    });
+    createInventoryRows(true);
+    document.querySelectorAll('[data-save][data-inventory]').forEach(el => {
+      const key = el.id || el.dataset.perk;
+      if (key in data) el.value = data[key];
+    });
+  }
+
+  function saveActiveTabState() {
+    if (isReadOnly) return;
+    const active = getActiveTab();
+    if (!active) return;
+    active.data = captureCurrentState();
+    active.name = normalizeTabName(active.data.nome, sheetStore.tabs.indexOf(active)+1);
+    persistSheetStore();
+    renderTabs();
+  }
+
+  function saveState() { saveActiveTabState(); }
+
+  function createTab(initialData={}, preferredName='') {
+    const tab = { id: uniqueId(), name: normalizeTabName(preferredName || initialData.nome, sheetStore.tabs.length+1), data: { ...makeBlankState(), ...initialData } };
+    sheetStore.tabs.push(tab);
+    sheetStore.activeId = tab.id;
+    persistSheetStore();
+    renderTabs();
+    applyStateToForm(tab.data);
+    createInventoryRows(true);
+    updateAll();
+  }
+
+  function switchTab(tabId) {
+    if (tabId === sheetStore.activeId) return;
+    saveActiveTabState();
+    sheetStore.activeId = tabId;
+    const active = getActiveTab();
+    if (!active) return;
+    persistSheetStore();
+    renderTabs();
+    applyStateToForm(active.data || {});
+    createInventoryRows(true);
+    updateAll();
+  }
+
+  function openCloseTabModal(tabId) {
+    const tab = sheetStore.tabs.find(t => t.id === tabId);
+    if (!tab) return;
+    pendingCloseTabId = tabId;
+    byId('closeTabMessage').innerHTML = `Fechar <strong>${normalizeTabName(tab.name)}</strong>? Os dados serão perdidos.`;
+    closeTabModal.classList.remove('hidden');
+    closeTabModal.setAttribute('aria-hidden','false');
+  }
+
+  function closeCloseTabModal() { pendingCloseTabId = null; closeTabModal.classList.add('hidden'); closeTabModal.setAttribute('aria-hidden','true'); }
+
+  function closeTab(tabId) {
+    const idx = sheetStore.tabs.findIndex(t => t.id === tabId);
+    if (idx === -1) return;
+    sheetStore.tabs.splice(idx, 1);
+    if (!sheetStore.tabs.length) { const t={id:uniqueId(),name:defaultTabName(1),data:makeBlankState()}; sheetStore.tabs=[t]; }
+    if (!sheetStore.tabs.some(t => t.id === sheetStore.activeId)) sheetStore.activeId = sheetStore.tabs[Math.max(0,idx-1)].id;
+    persistSheetStore();
+    renderTabs();
+    const active = getActiveTab();
+    applyStateToForm(active ? active.data : {});
+    createInventoryRows(true);
+    updateAll();
+  }
+
+  function sanitizeFilename(name, fb='ficha_ark_rpg') {
+    return (String(name||fb).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'')||fb);
+  }
+
+  function buildWorkspaceExport(tabs) {
+    return { exportType:'ark-rpg-workspace', version:1, activeId:tabs[0]?.id||null,
+      tabs: tabs.map((t,i) => ({ id:t.id||uniqueId(), name:normalizeTabName(t.name,i+1), data:{...makeBlankState(),...(t.data||{})} })) };
+  }
+
+  function downloadJson(filenameBase, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `${sanitizeFilename(filenameBase)}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  function getSelectedExportTabs() { return [...document.querySelectorAll('[data-export-tab]:checked')].map(b=>sheetStore.tabs.find(t=>t.id===b.value)).filter(Boolean); }
+
+  function renderExportChecklist() {
+    if (!exportTabsChecklist) return;
+    exportTabsChecklist.innerHTML = '';
+    sheetStore.tabs.forEach((tab,i) => {
+      const label = document.createElement('label');
+      label.className = 'checklist-item';
+      label.innerHTML = `<input type="checkbox" data-export-tab value="${tab.id}" checked /><span>${normalizeTabName(tab.name,i+1)}</span>`;
+      exportTabsChecklist.appendChild(label);
+    });
+    syncExportChecklistState();
+  }
+
+  function syncExportChecklistState() {
+    const sep = document.querySelector('input[name="exportMode"]:checked')?.value === 'selected-separate';
+    document.querySelectorAll('.checklist-item').forEach(i => i.classList.toggle('disabled',!sep));
+    document.querySelectorAll('[data-export-tab]').forEach(b => b.disabled = !sep);
+  }
+
+  function openModal(m) { if(!m)return; m.classList.remove('hidden'); m.setAttribute('aria-hidden','false'); }
+  function closeModal(m) { if(!m)return; m.classList.add('hidden'); m.setAttribute('aria-hidden','true'); }
+  function closeAllSecondaryModals() { closeModal(exportModal); closeModal(importModal); closeModal(replaceImportModal); }
+
+  function normalizeImportedTabs(parsed, fileName='') {
+    if (parsed && Array.isArray(parsed.tabs) && parsed.tabs.length) {
+      return parsed.tabs.map((t,i) => ({ id:uniqueId(), name:normalizeTabName(t?.name||t?.data?.nome,i+1), data:{...makeBlankState(),...(t?.data||{})} }));
+    }
+    const fb = fileName.replace(/\.json$/i,'')||parsed?.nome||defaultTabName(sheetStore.tabs.length+1);
+    return [{ id:uniqueId(), name:normalizeTabName(parsed?.nome||fb,sheetStore.tabs.length+1), data:{...makeBlankState(),...(parsed||{})} }];
+  }
+
+  function appendImportedTabs(tabs) {
+    if (!tabs.length) return; saveState();
+    tabs.forEach((t,i) => sheetStore.tabs.push({ id:uniqueId(), name:normalizeTabName(t.name,sheetStore.tabs.length+1+i), data:{...makeBlankState(),...(t.data||{})} }));
+    sheetStore.activeId = sheetStore.tabs[sheetStore.tabs.length-1].id;
+    persistSheetStore(); renderTabs();
+    const a=getActiveTab(); applyStateToForm(a?a.data:{}); createInventoryRows(true); updateAll();
+  }
+
+  function replaceWorkspaceWithImportedTabs(tabs) {
+    if (!tabs.length) return;
+    sheetStore = { activeId:tabs[0].id, tabs: tabs.map((t,i) => ({ id:t.id||uniqueId(), name:normalizeTabName(t.name,i+1), data:{...makeBlankState(),...(t.data||{})} })) };
+    persistSheetStore(); renderTabs(); applyStateToForm(sheetStore.tabs[0].data||{}); createInventoryRows(true); updateAll();
+  }
+
+  /* ─── INVENTORY ─── */
+  function inventorySlotCount() { return 5 + Math.max(0, Math.round(num('peso'))); }
+  function backpackEnabled()    { const f=byId('mochilaAtiva'); return !!f && f.value==='sim'; }
+  function backpackSlotCount()  { if(!backpackEnabled())return 0; return Math.max(0,Math.round(num('mochilaSlots'))); }
+  function inventoryValueKey(s,f) { return `inventory_${s}_${f}`; }
+  function backpackValueKey(s,f)  { return `backpack_${s}_${f}`; }
+
+  let currentInventorySlots=0, currentBackpackSlots=0;
+
+  function createStorageRows(bodyId, total, keyBuilder, dataAttr) {
+    const body=byId(bodyId); if(!body)return;
+    const prev={}; body.querySelectorAll(`[${dataAttr}]`).forEach(el=>prev[el.dataset.key]=el.value);
+    body.innerHTML='';
+    for(let i=1;i<=total;i++){
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td><span class="slot-badge">${i}</span></td><td><input data-save ${dataAttr} data-key="${keyBuilder(i,'desc')}" id="${keyBuilder(i,'desc')}" placeholder="Nome do item" /></td><td><input data-save ${dataAttr} data-key="${keyBuilder(i,'qty')}" id="${keyBuilder(i,'qty')}" type="number" min="0" step="1" value="0" /></td><td><input data-save ${dataAttr} data-key="${keyBuilder(i,'unit')}" id="${keyBuilder(i,'unit')}" type="number" min="0" step="0.01" value="0" /></td><td><input id="${keyBuilder(i,'total')}" readonly /></td>`;
+      body.appendChild(tr);
+    }
+    for(const[k,v] of Object.entries(prev)){const el=byId(k);if(el)el.value=v;}
+  }
+
+  function createInventoryRows(force=false) {
+    const ts=inventorySlotCount();
+    if(force||ts!==currentInventorySlots){currentInventorySlots=ts;createStorageRows('inventoryBody',ts,inventoryValueKey,'data-inventory');}
+    const tbs=backpackSlotCount();
+    const ms=byId('mochilaSection'),mb=byId('mochilaSlotsBox');
+    if(ms)ms.style.display=backpackEnabled()?'':'none';
+    if(mb)mb.style.display=backpackEnabled()?'':'none';
+    if(force||tbs!==currentBackpackSlots){currentBackpackSlots=tbs;createStorageRows('backpackBody',tbs,backpackValueKey,'data-backpack');}
+  }
+
+  function collectStorageTotals(total, keyBuilder) {
+    let used=0,totalWeight=0;
+    for(let i=1;i<=total;i++){
+      const desc=byId(keyBuilder(i,'desc')),qty=byId(keyBuilder(i,'qty')),unit=byId(keyBuilder(i,'unit')),tot=byId(keyBuilder(i,'total'));
+      if(!desc||!qty||!unit||!tot)continue;
+      const q=Math.max(0,parseFloat(qty.value)||0),u=Math.max(0,parseFloat(unit.value)||0),rt=q*u;
+      tot.value=rt.toFixed(2).replace(/\.00$/,'');
+      if((desc.value||'').trim())used+=1; totalWeight+=rt;
+    }
+    return{used,totalWeight,totalSlots:total,free:Math.max(0,total-used)};
+  }
+
+  function inventoryTotals() {
+    const c=collectStorageTotals(inventorySlotCount(),inventoryValueKey);
+    const bp=backpackEnabled()?collectStorageTotals(backpackSlotCount(),backpackValueKey):{used:0,totalWeight:0,totalSlots:0,free:0};
+    return{character:c,backpack:bp,used:c.used+bp.used,totalWeight:c.totalWeight+bp.totalWeight,totalSlots:c.totalSlots+bp.totalSlots,free:c.free+bp.free};
+  }
+
+  /* ─── PERKS ─── */
+  const perkData = {
+    forca:       [{id:'golpe_firme',nome:'Golpe Firme',efeito:'+10% de dano em ataques corpo a corpo'},{id:'impacto_pesado',nome:'Impacto Pesado',efeito:'+10% de dano com armas pesadas'},{id:'derrubar_gigantes',nome:'Derrubar Gigantes',efeito:'+10% de dano contra criaturas grandes'}],
+    destreza:    [{id:'passo_leve',nome:'Passo Leve',efeito:'+1,5 m de movimento'},{id:'reflexo',nome:'Reflexo',efeito:'+5% redução de dano'},{id:'agilidade',nome:'Agilidade',efeito:'-10% custo de stamina em ataques leves'}],
+    inteligencia:[{id:'oficio_inicial',nome:'Ofício Inicial',efeito:'+10% velocidade de criação'},{id:'mao_economica',nome:'Mão Econômica',efeito:'-10% custo de materiais'},{id:'ajuste_mestre',nome:'Ajuste de Mestre',efeito:'+5% na qualidade de itens'}],
+    peso:        [{id:'mulinha',nome:'Mulinha',efeito:'+25 kg de capacidade'},{id:'organizacao_basica',nome:'Organização Básica',efeito:'-10% em peso dos itens'},{id:'costas_de_ferro',nome:'Costas de Ferro',efeito:'Penalidade de movimento só começa em 90%'}],
+    resistencia: [{id:'tourinho',nome:'Tourinho',efeito:'+20 stamina'},{id:'senta_e_respira',nome:'Senta e Respira',efeito:'+2% regen stamina'},{id:'trabalho_consciente',nome:'Trabalho Consciente',efeito:'-10% custo de ações'}],
+    constituicao:[{id:'corpo_forte',nome:'Corpo Forte',efeito:'+5% resistência a dano'},{id:'tolerancia_basica',nome:'Tolerância Básica',efeito:'-10% torpor recebido'}]
+  };
+
+  function createPerks() {
+    const host=byId('perkGrid'); if(!host)return;
+    const labels={forca:'Força',destreza:'Destreza',inteligencia:'Inteligência',peso:'Peso',resistencia:'Resistência',constituicao:'Constituição'};
+    host.innerHTML='';
+    for(const[attr,list] of Object.entries(perkData)){
+      const g=document.createElement('div'); g.className='perk-group';
+      g.innerHTML=`<div class="attr-head"><strong>${labels[attr]}</strong><span class="pill">requer pelo menos 1 ponto</span></div>`;
+      list.forEach(p=>{
+        const item=document.createElement('label'); item.className='perk-item';
+        item.innerHTML=`<input type="checkbox" data-perk="${p.id}" data-attrreq="${attr}" data-save /><div><div class="perk-title">${p.nome}</div><div class="small">${p.efeito}</div></div>`;
+        g.appendChild(item);
+      });
+      host.appendChild(g);
+    }
+  }
+
+  function selectedPerks() { return [...document.querySelectorAll('[data-perk]:checked')].map(el=>el.dataset.perk); }
+  function hasPerk(id) { return selectedPerks().includes(id); }
+
+  function updatePerkLocks() {
+    const total=Math.floor(Math.max(1,Math.round(num('nivel'))||1)/5)+num('perkBonus');
+    const used=selectedPerks().length; const noSlots=used>=total;
+    document.querySelectorAll('[data-perk]').forEach(b=>{
+      const attr=b.dataset.attrreq, av=num(attr), attrBlocked=av<1, slotBlocked=!b.checked&&noSlots;
+      b.disabled=attrBlocked||slotBlocked; if(attrBlocked)b.checked=false;
+    });
+  }
+
+  function attrCost(v) { let t=0; for(let i=1;i<=v;i++)t+=i>80?3:i>50?2:1; return t; }
+  function d20Multiplier(r) { if(r>=20)return 2; if(r>=18)return 1.5; if(r>=11)return 1; if(r>=4)return 0.5; return 0.3; }
+
+  function updateBars(curId, max, barId) {
+    const cur=clamp(num(curId),0,Math.max(0,max));
+    byId(curId).value=cur;
+    const pct=max<=0?0:(cur/max)*100;
+    byId(barId).style.width=`${clamp(pct,0,100)}%`;
+  }
+
+  /* ─── POSTURA ─── */
+  function setPostura(p) {
+    byId('posturaAtual').value=p;
+    document.querySelectorAll('.postura-btn').forEach(b=>b.classList.toggle('active-postura',b.dataset.postura===p));
+    updateAll(); saveState();
+  }
+
+  /* ─── MAIN UPDATE FUNCTION ─── */
+  function updateAll() {
+    createInventoryRows();
+    updatePerkLocks();
+
+    const attrs=['forca','constituicao','destreza','inteligencia','sabedoria','carisma','peso','resistencia'];
+    attrs.forEach(id=>{
+      let v=clamp(Math.round(num(id)),0,100);
+      byId(id).value=v;
+      const cost=attrCost(v);
+      const costEl=byId(id+'Cost'), infoEl=byId(id+'Info');
+      if(costEl)costEl.value=cost;
+      if(infoEl){
+        if(id==='forca')      infoEl.value=`+${v*2}% dano`;
+        else if(id==='constituicao') infoEl.value=`+${v*10} HP`;
+        else if(id==='destreza')  infoEl.value=`+${v} furt, +${(v*0.5).toFixed(1)}m`;
+        else if(id==='inteligencia') infoEl.value=`+${v}% craft vel`;
+        else if(id==='sabedoria')  infoEl.value=`+${v} perc, +${v*5}s O2`;
+        else if(id==='carisma')   infoEl.value=`+${v} interação`;
+        else if(id==='peso')      infoEl.value=`+${v*10} kg cap`;
+        else if(id==='resistencia') infoEl.value=`+${v*2} stamina`;
+      }
+    });
+
+    const nivel=Math.max(1,Math.round(num('nivel'))||1);
+    const ppp=5;
+    const pontosTotais=nivel*ppp+num('bonusPontos');
+    const pontosGastos=attrs.reduce((s,id)=>s+attrCost(clamp(Math.round(num(id)),0,100)),0);
+    const pontosRestantes=pontosTotais-pontosGastos;
+    byId('pontosTotais').textContent=pontosTotais;
+    byId('pontosGastos').textContent=pontosGastos;
+    byId('pontosRestantes').textContent=pontosRestantes;
+    const pS=byId('pontosStatus');
+    if(pontosRestantes<0){pS.textContent='acima do limite!';pS.className='status-danger';}
+    else if(pontosRestantes===0){pS.textContent='exatos';pS.className='status-ok';}
+    else{pS.textContent='disponível';pS.className='';}
+
+    const perkTotal=Math.floor(nivel/5)+num('perkBonus');
+    const perkUsed=selectedPerks().length;
+    const perkLeft=perkTotal-perkUsed;
+    byId('perkTotal').textContent=perkTotal;
+    byId('perkUsed').textContent=perkUsed;
+    byId('perkLeft').textContent=perkLeft;
+    const pSt=byId('perkStatus');
+    if(perkLeft<0){pSt.textContent='acima do limite!';pSt.className='status-danger';}
+    else if(perkLeft===0){pSt.textContent='exatas';pSt.className='status-ok';}
+    else{pSt.textContent='disponível';pSt.className='';}
+
+    const con=clamp(Math.round(num('constituicao')),0,100);
+    const res=clamp(Math.round(num('resistencia')),0,100);
+    const des=clamp(Math.round(num('destreza')),0,100);
+    const pes=clamp(Math.round(num('peso')),0,100);
+    const sab=clamp(Math.round(num('sabedoria')),0,100);
+    const for_=clamp(Math.round(num('forca')),0,100);
+    const int_=clamp(Math.round(num('inteligencia')),0,100);
+
+    const corpForte=hasPerk('corpo_forte');
+    const tolBasica=hasPerk('tolerancia_basica');
+    const mulinha  =hasPerk('mulinha');
+    const orgBasica=hasPerk('organizacao_basica');
+    const costasFerro=hasPerk('costas_de_ferro');
+    const tourinho=hasPerk('tourinho');
+    const sentaRespira=hasPerk('senta_e_respira');
+    const passoLeve=hasPerk('passo_leve');
+    const reflexo=hasPerk('reflexo');
+
+    const vidaBase=100+con*10;
+    const vidaMax=vidaBase;
+    byId('vidaMax').textContent=vidaMax;
+    byId('vidaRegen').textContent=`regen: ${2+Math.floor(con/10)}% por turno`;
+
+    const torporMax=100+con*10;
+    byId('torporMax').textContent=torporMax;
+    byId('torporInfo').textContent=tolBasica?'-10% torpor recebido':'torpor = desmaio';
+
+    const staminaBase=100+res*2+(tourinho?20:0);
+    byId('staminaMax').textContent=staminaBase;
+    const staminaRegenPct=5+Math.floor(res/10)+(sentaRespira?2:0);
+    byId('staminaRegen').textContent=`regen: ${staminaRegenPct}% por ação`;
+
+    const capacidadeBase=50+pes*10+(mulinha?25:0);
+    byId('capacidadeVal').textContent=`${capacidadeBase} kg`;
+
+    const inv=inventoryTotals();
+    const pesoTotal=orgBasica?inv.totalWeight*0.9:inv.totalWeight;
+    const pesoPct=capacidadeBase>0?(pesoTotal/capacidadeBase)*100:0;
+    byId('pesoAtual').value=pesoTotal.toFixed(2).replace(/\.00$/,'');
+    byId('pesoAtualMax').value=capacidadeBase;
+    byId('pesoUso').value=`${pesoPct.toFixed(1)}%`;
+    const limiar=costasFerro?90:75;
+    const pesoPenalizado=pesoPct>=100;
+    const pesoLento=pesoPct>=limiar&&!pesoPenalizado;
+    if(byId('pesoPenalty')){
+      if(pesoPenalizado)byId('pesoPenalty').textContent='imóvel (100%+)';
+      else if(pesoLento)byId('pesoPenalty').textContent=`penalidade (${limiar}%+)`;
+      else byId('pesoPenalty').textContent='livre';
+    }
+    updateBars('vidaAtual',vidaMax,'vidaBar');
+    updateBars('torporAtual',torporMax,'torporBar');
+    updateBars('staminaAtual',staminaBase,'staminaBar');
+    byId('vidaAtualMax').value=vidaMax; byId('torporAtualMax').value=torporMax; byId('staminaAtualMax').value=staminaBase;
+    if(byId('pesoBar'))byId('pesoBar').style.width=`${clamp(pesoPct,0,100)}%`;
+
+    byId('inventarioSlotsTotal').textContent=inv.character.totalSlots;
+    byId('inventarioSlotsUsados').textContent=inv.character.used;
+    byId('inventarioSlotsLivres').textContent=inv.character.free;
+    if(byId('mochilaSlotsTotal'))byId('mochilaSlotsTotal').textContent=inv.backpack.totalSlots;
+    if(byId('mochilaSlotsUsados'))byId('mochilaSlotsUsados').textContent=inv.backpack.used;
+    if(byId('mochilaSlotsLivres'))byId('mochilaSlotsLivres').textContent=inv.backpack.free;
+
+    const movBase=5+(passoLeve?1.5:0);
+    if(pesoPenalizado){byId('andarVal').textContent='0 m';byId('correrVal').textContent='0 m';}
+    else if(pesoLento){byId('andarVal').textContent=`${(movBase*0.5).toFixed(1).replace('.0','')} m`;byId('correrVal').textContent=`${(movBase).toFixed(1).replace('.0','')} m`;}
+    else{byId('andarVal').textContent=`${movBase.toFixed(1).replace('.0','')} m`;byId('correrVal').textContent=`${(movBase*2).toFixed(1).replace('.0','')} m`;}
+
+    byId('esquivaVal').textContent=`d100/2+${(des/2).toFixed(1).replace('.0','')}`;
+    byId('furtividadeVal').textContent=des;
+    byId('percepcaoVal').textContent=10+sab;
+    byId('zonaPercepcao').textContent=`zona: ${Math.round((10+sab)*1.5)} m`;
+    byId('oxigenioVal').textContent=`${60+sab*5} s`;
+    byId('danoFisicoVal').textContent=`+${for_*2}%`;
+    byId('danoDistVal').textContent=`+${des}%`;
+    byId('craftVelVal').textContent=`+${int_}% vel`;
+    byId('craftQualVal').textContent=`qualidade +${hasPerk('ajuste_mestre')?int_+5:int_}%`;
+
+    // Postura
+    const postura=byId('posturaAtual').value||'neutra';
+    document.querySelectorAll('.postura-btn').forEach(b=>b.classList.toggle('active-postura',b.dataset.postura===postura));
+    const armadura=byId('armadura')?byId('armadura').value:'sem';
+    const armaduraBonus=num('armaduraBonus');
+    let damageReduction=0+armaduraBonus;
+    if(armadura==='leve')damageReduction+=10; else if(armadura==='media')damageReduction+=20; else if(armadura==='pesada')damageReduction+=35;
+    if(corpForte)damageReduction+=5; if(reflexo)damageReduction+=5;
+    if(postura==='defensiva')damageReduction+=50;
+    const posturaTexts={
+      neutra:'Neutra: sem bônus ou penalidades.',
+      ofensiva:`Ofensiva: +20% dano. Redução de dano: ${Math.max(0,damageReduction-20)}% (−20% armadura).`,
+      defensiva:`Defensiva: −50% dano recebido. Redução total: ${damageReduction}%.`,
+      esquiva:`Esquiva: d100/2 + destreza/2. Armadura leve: esquiva total. Média: parcial. Pesada: sem esquiva.`,
+      furtiva:`Furtiva: −2 m de movimento, furtividade +${Math.round(des*0.5)} bônus.`
+    };
+    if(byId('posturaResumo'))byId('posturaResumo').textContent=posturaTexts[postura]||'';
+
+    // Combate
+    const armaEscala=byId('armaEscala')?byId('armaEscala').value:'forca';
+    const attrValEscala=armaEscala==='forca'?for_:armaEscala==='destreza'?des:0;
+    const attrPct=armaEscala==='forca'?for_*2:armaEscala==='destreza'?des:0;
+    if(byId('armaScaleValue'))byId('armaScaleValue').textContent=`+${attrValEscala}`;
+    if(byId('armaScaleText'))byId('armaScaleText').textContent=armaEscala==='nenhum'?'sem escalonamento':`${armaEscala} (${attrPct}%)`;
+
+    const d20=clamp(Math.round(num('rolagemD20')),1,20);
+    const multi=d20Multiplier(d20);
+    if(byId('multiD20'))byId('multiD20').textContent=`${multi*100}%`;
+
+    let percentualTotal=attrPct+(postura==='ofensiva'?20:0)+num('bonusPercentualExtra');
+    if(byId('tamanhoAlvo')&&byId('tamanhoAlvo').value==='grande'&&hasPerk('derrubar_gigantes'))percentualTotal+=10;
+    if(hasPerk('golpe_firme')&&armaEscala==='forca')percentualTotal+=10;
+    if(hasPerk('impacto_pesado'))percentualTotal+=10;
+    if(hasPerk('agilidade')&&armaEscala==='destreza')percentualTotal-=0;
+
+    const danoBase=num('danoBaseRolado')+num('armaBonus')+num('efeitoExtra');
+    const danoBruto=danoBase*multi*(1+percentualTotal/100);
+    const redAlvo=clamp(num('reducaoArmaduraAlvo'),0,100);
+    const danoFinal=danoBruto*(1-redAlvo/100);
+    const alvoAntes=num('danoAplicadoAlvo');
+    const vidaRestanteAlvo=Math.max(0,alvoAntes-danoFinal);
+
+    if(byId('percentualTotalDano'))byId('percentualTotalDano').textContent=`${percentualTotal>=0?'+':''}${percentualTotal}%`;
+    if(byId('danoBruto'))byId('danoBruto').textContent=danoBruto.toFixed(2).replace(/\.00$/,'');
+    if(byId('danoFinal'))byId('danoFinal').textContent=danoFinal.toFixed(2).replace(/\.00$/,'');
+    if(byId('vidaRestanteAlvo'))byId('vidaRestanteAlvo').value=alvoAntes>0?vidaRestanteAlvo.toFixed(2).replace(/\.00$/,''):'';
+
+    const danoRecebidoBruto=num('danoRecebidoBruto');
+    const esquivaAtiva=postura==='esquiva';
+    const rolagemEsquiva=clamp(num('rolagemEsquiva'),1,100);
+    const penalidadeEsquiva=num('penalidadeEsquiva');
+    let formulaEsquivaValor=0;
+    if(armadura==='leve')formulaEsquivaValor=rolagemEsquiva/2+des/2;
+    else if(armadura==='media')formulaEsquivaValor=rolagemEsquiva/4+des/4;
+    const danoEsquivado=clamp(formulaEsquivaValor-penalidadeEsquiva,0,danoRecebidoBruto);
+    const danoAposEsquiva=Math.max(0,danoRecebidoBruto-danoEsquivado);
+    const danoRecebidoFinal=danoAposEsquiva*(1-damageReduction/100);
+    const vidaAposDanoRecebido=Math.max(0,num('vidaAtual')-danoRecebidoFinal);
+
+    let esquivaCalcValor=0;
+    if(armadura==='leve')esquivaCalcValor=50+des/2; else if(armadura==='media')esquivaCalcValor=25+des/4;
+    if(byId('esquivaCalc'))byId('esquivaCalc').textContent=esquivaCalcValor.toFixed(1).replace('.0','');
+    if(byId('reducaoArmaduraRecebida'))byId('reducaoArmaduraRecebida').value=`${damageReduction}%`;
+    if(byId('danoRecebidoFinal'))byId('danoRecebidoFinal').value=danoRecebidoFinal.toFixed(2).replace(/\.00$/,'');
+    if(byId('vidaAposDanoRecebido'))byId('vidaAposDanoRecebido').value=vidaAposDanoRecebido.toFixed(2).replace(/\.00$/,'');
+    if(byId('formulaEsquiva'))byId('formulaEsquiva').value=formulaEsquivaValor.toFixed(2).replace(/\.00$/,'');
+    if(byId('danoEsquivado'))byId('danoEsquivado').value=danoEsquivado.toFixed(2).replace(/\.00$/,'');
+    if(byId('esquivaBox'))byId('esquivaBox').style.display=esquivaAtiva?'block':'none';
+    if(byId('applyReceivedDamageBtn'))byId('applyReceivedDamageBtn').disabled=danoRecebidoBruto<=0;
+    if(byId('ataqueResumo'))byId('ataqueResumo').textContent=`${byId('armaNome').value||'Arma'} (${byId('armaDado').value||'-'})`;
+
+    saveActiveTabState();
+  }
+
+  window.applyDelta = function(type) {
+    const cur=num(`${type}Atual`), delta=num(`${type}Delta`), max=num(`${type}AtualMax`);
+    byId(`${type}Atual`).value=clamp(cur+delta,0,max); byId(`${type}Delta`).value=0; updateAll();
+  };
+
+  /* ─── EVENT LISTENERS ─── */
+  byId('useActionBtn')?.addEventListener('click', ()=>{
+    let cost=parseFloat(byId('acaoRapida')?.value)||0;
+    if(hasPerk('trabalho_consciente'))cost*=0.9;
+    byId('staminaAtual').value=Math.max(0,num('staminaAtual')-Math.round(cost*100)/100);
+    updateAll();
+  });
+
+  byId('recoverStaminaBtn').addEventListener('click', ()=>{
+    const max=num('staminaAtualMax'), res2=num('resistencia');
+    let rp=5+Math.floor(res2/10); if(hasPerk('senta_e_respira'))rp+=2;
+    byId('staminaAtual').value=clamp(num('staminaAtual')+Math.round(max*rp/100),0,max);
+    updateAll();
+  });
+
+  byId('recoverHpBtn').addEventListener('click', ()=>{
+    const max=num('vidaAtualMax'),con2=num('constituicao');
+    const rp=2+Math.floor(con2/10);
+    byId('vidaAtual').value=clamp(num('vidaAtual')+Math.round(max*rp/100),0,max);
+    updateAll();
+  });
+
+  byId('dropTorporBtn').addEventListener('click', ()=>{
+    byId('torporAtual').value=Math.max(0,num('torporAtual')-Math.round(num('torporAtualMax')*0.05));
+    updateAll();
+  });
+
+  byId('applyReceivedDamageBtn').addEventListener('click', ()=>{
+    byId('vidaAtual').value=Math.max(0,num('vidaAtual')-(Math.max(0,parseFloat(byId('danoRecebidoFinal').value)||0)));
+    updateAll();
+  });
+
+  byId('applyDamageToTargetBtn').addEventListener('click', ()=>{
+    const va=Math.max(0,num('danoAplicadoAlvo')),df=Math.max(0,parseFloat(byId('danoFinal').textContent.replace(',','.'))||0);
+    byId('danoAplicadoAlvo').value=Math.max(0,va-df).toFixed(2).replace(/\.00$/,'');
+    updateAll();
+  });
+
+  byId('exportBtn').addEventListener('click', ()=>{ saveState(); renderExportChecklist(); openModal(exportModal); });
+  byId('importBtn').addEventListener('click', ()=>{ pendingImportMode='append'; document.querySelector('input[name="importMode"][value="append"]').checked=true; openModal(importModal); });
+  byId('confirmExportBtn').addEventListener('click', ()=>{
+    saveState();
+    const mode=document.querySelector('input[name="exportMode"]:checked')?.value||'active';
+    const active=getActiveTab();
+    if(mode==='workspace')downloadJson('ficha_ark_rpg_completa',buildWorkspaceExport(sheetStore.tabs));
+    else if(mode==='selected-separate'){const sel=getSelectedExportTabs();if(!sel.length){alert('Selecione ao menos uma aba.');return;}sel.forEach((t,i)=>setTimeout(()=>downloadJson(sanitizeFilename(t.name||`ficha_${i+1}`),t.data||{}),i*150));}
+    else downloadJson(active?.name||'ficha_ark_rpg',active?.data||{});
+    closeModal(exportModal);
+  });
+  byId('cancelExportBtn').addEventListener('click', ()=>closeModal(exportModal));
+  document.querySelectorAll('input[name="exportMode"]').forEach(r=>r.addEventListener('change',syncExportChecklistState));
+
+  byId('chooseImportFileBtn').addEventListener('click', ()=>{
+    pendingImportMode=document.querySelector('input[name="importMode"]:checked')?.value||'append';
+    closeModal(importModal);
+    if(pendingImportMode==='replace'){openModal(replaceImportModal);return;}
+    byId('fileInput').click();
+  });
+  byId('cancelImportBtn').addEventListener('click', ()=>closeModal(importModal));
+  byId('cancelReplaceImportBtn').addEventListener('click', ()=>closeModal(replaceImportModal));
+  byId('confirmReplaceImportBtn').addEventListener('click', ()=>{ closeModal(replaceImportModal); byId('fileInput').click(); });
+  byId('fileInput').addEventListener('change', async(e)=>{
+    const file=e.target.files[0]; if(!file)return;
+    try{const t=await file.text();const p=JSON.parse(t);const tabs=normalizeImportedTabs(p,file.name);if(!tabs.length)throw new Error();
+      if(pendingImportMode==='replace')replaceWorkspaceWithImportedTabs(tabs);else appendImportedTabs(tabs);}
+    catch(err){alert('Não foi possível importar o arquivo JSON.');}
+    finally{pendingImportMode='append';e.target.value='';}
+  });
+
+  byId('printBtn').addEventListener('click', ()=>window.print());
+  byId('resetBtn').addEventListener('click', ()=>{
+    const active=getActiveTab(); if(!active)return;
+    if(!confirm('Isso vai limpar a ficha atual. Deseja continuar?'))return;
+    active.data=makeBlankState(); active.name=defaultTabName(sheetStore.tabs.indexOf(active)+1);
+    persistSheetStore(); renderTabs(); applyStateToForm(active.data); createInventoryRows(true); updateAll();
+  });
+
+  byId('addTabBtn').addEventListener('click', ()=>{ saveState(); createTab({},defaultTabName(sheetStore.tabs.length+1)); });
+
+  byId('tabsBar').addEventListener('click', (e)=>{
+    const closeBtn=e.target.closest('[data-close-tab]');
+    if(closeBtn){e.stopPropagation();openCloseTabModal(closeBtn.dataset.closeTab);return;}
+    const tabBtn=e.target.closest('[data-tab-id]');
+    if(tabBtn)switchTab(tabBtn.dataset.tabId);
+  });
+
+  byId('cancelCloseTabBtn').addEventListener('click', ()=>closeCloseTabModal());
+  byId('confirmCloseTabBtn').addEventListener('click', ()=>{ if(pendingCloseTabId)closeTab(pendingCloseTabId); closeCloseTabModal(); });
+
+  closeTabModal.addEventListener('click', e=>{ if(e.target===closeTabModal)closeCloseTabModal(); });
+  [exportModal,importModal,replaceImportModal].forEach(m=>{ if(!m)return; m.addEventListener('click',e=>{if(e.target===m)closeModal(m);}); });
+
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape'&&!closeTabModal.classList.contains('hidden')){closeCloseTabModal();return;}
+    if(e.key==='Escape')closeAllSecondaryModals();
+  });
+
+  document.addEventListener('input', e=>{ if(e.target.matches('#sheet-screen input, #sheet-screen select, #sheet-screen textarea'))updateAll(); });
+  document.addEventListener('change', e=>{ if(e.target.matches('#sheet-screen input, #sheet-screen select, #sheet-screen textarea'))updateAll(); });
+</script>
+</body>
+</html>
