@@ -1114,7 +1114,7 @@
         await userRef.update({ displayName: user.displayName || user.email, photoURL: user.photoURL || '' });
       }
 
-      if (currentRole === 'player' || currentRole === 'admin' currentRole === 'master') {
+      if (currentRole === 'player' || currentRole === 'admin' || currentRole === 'master') {
         await initSheetForUser(user.uid, false);
         showScreen('sheet');
       } else {
