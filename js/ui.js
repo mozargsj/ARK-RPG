@@ -37,6 +37,18 @@
       .set({ pointsLocked: true }, { merge: true });
 }
 
+function confirmApplyPoints() {
+
+  const skip = localStorage.getItem("skipApplyPointsConfirm");
+
+  if (skip === "true") {
+    applyPoints();
+    return;
+  }
+
+  document.getElementById("applyPointsModal").style.display = "flex";
+}
+
   function openCloseTabModal(tabId) {
     const tab = sheetStore.tabs.find(t => t.id === tabId);
     if (!tab) return;
