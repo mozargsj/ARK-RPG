@@ -22,6 +22,9 @@
     };
     firebase.initializeApp(FIREBASE_CONFIG);
 
+    const auth = firebase.auth();
+    const googleProvider = new firebase.auth.GoogleAuthProvider();
+
     // Seu email Google — será definido automaticamente como administrador no primeiro login
     const ADMIN_EMAIL = "mozargsj@gmail.com";
   </script>
