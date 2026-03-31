@@ -1,1 +1,25 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,8,14,.78);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-box {
+  width: min(100%,520px);
+  border-radius: 16px;
+  padding: 22px;
+  border: 1px solid rgba(105,223,255,.28);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
