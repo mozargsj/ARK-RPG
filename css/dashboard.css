@@ -1,1 +1,39 @@
+#dashboard-screen { min-height: 100vh; }
 
+.dash-topbar {
+  display: flex;
+  gap: 14px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--ark-line);
+}
+
+.dash-logo {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--ark-cyan);
+}
+
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
+  gap: 16px;
+}
+
+.player-card {
+  background: linear-gradient(180deg,rgba(9,22,35,.97),rgba(5,12,20,.98));
+  border: 1px solid var(--ark-line);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.role-admin {
+  color:#ffd060;
+}
+
+.role-master {
+  color:#cc88ff;
+}
+
+.role-player {
+  color:var(--ark-cyan);
+}
