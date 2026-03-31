@@ -36,3 +36,14 @@
       .doc(currentUser.uid)
       .set({ pointsLocked: true }, { merge: true });
 }
+
+  function openCloseTabModal(tabId) {
+    const tab = sheetStore.tabs.find(t => t.id === tabId);
+    if (!tab) return;
+    pendingCloseTabId = tabId;
+    byId('closeTabMessage').innerHTML = `Fechar <strong>${normalizeTabName(tab.name)}</strong>? Os dados serão perdidos.`;
+    closeTabModal.classList.remove('hidden');
+    closeTabModal.setAttribute('aria-hidden','false');
+  }
+
+  function closeCloseTabModal() { pendingCloseTabId = null; closeTabModal.classList.add('hidden'); closeTabModal.setAttribute('aria-hidden','true'); }
