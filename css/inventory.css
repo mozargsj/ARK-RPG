@@ -1,1 +1,23 @@
+.inventory-table-wrap {
+  border: 1px solid var(--ark-line);
+  border-radius: 16px;
+  overflow: auto;
+  max-height: 430px;
+}
 
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inventory-table th {
+  position: sticky;
+  top: 0;
+  background: #0a1522;
+  color: var(--ark-cyan);
+}
+
+.slot-badge {
+  border-radius: 8px;
+  padding: 6px 10px;
+}
