@@ -1,1 +1,15 @@
+@media (max-width:1280px){
+  .grid{grid-template-columns:1fr;}
+}
 
+@media (max-width:900px){
+  .metric{grid-template-columns:1fr;}
+}
+
+@media (max-width:720px){
+  .row,
+  .row-3,
+  .row-4{
+    grid-template-columns:1fr;
+  }
+}
