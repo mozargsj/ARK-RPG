@@ -1360,11 +1360,14 @@
           if (!sheetStore.tabs.some(t => t.id === sheetStore.activeId)) sheetStore.activeId = sheetStore.tabs[0].id;
         } else { initBlankSheetStore(); }
       } else { initBlankSheetStore(); }
+
+      if (snap.exists && snap.data().pointsLocked) {
+        lockPointInputs();
+      }
+      
     } catch(e) { initBlankSheetStore(); }
 
-    if (snap.exists && snap.data().pointsLocked) {
-      lockPointInputs();
-    }
+    
     
     if (!sheetInitialized) {
       createPerks();
