@@ -1,1 +1,28 @@
+.tabs-shell {
+  margin-bottom: 14px;
+  padding: 10px;
+  border: 1px solid var(--ark-line);
+  border-radius: 14px;
+}
 
+.tabs-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.tabs-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-btn {
+  display: inline-flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(105,223,255,.24);
+}
+
+.tab-btn.active {
+  border-color: rgba(145,238,255,.5);
+}
