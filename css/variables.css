@@ -1,0 +1,21 @@
+:root {
+  --bg: #0b1220;
+  --panel: #121b2e;
+  --panel-2: #17233a;
+  --line: #2b3a5d;
+  --text: #e8eefc;
+  --muted: #9eb0d1;
+  --accent: #79a8ff;
+  --accent-2: #70e1b5;
+  --danger: #ff7d7d;
+  --warn: #ffc86b;
+  --ok: #8ce99a;
+
+  --ark-cyan: #7de7ff;
+  --ark-cyan-soft: rgba(125,231,255,.18);
+  --ark-line: rgba(94,218,255,.26);
+  --ark-panel: rgba(7,17,28,.88);
+  --ark-row: rgba(10,24,38,.92);
+  --ark-row-2: rgba(8,19,31,.98);
+  --ark-text-dim: #9cc8d6;
+}
