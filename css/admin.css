@@ -1,1 +1,20 @@
+#admin-screen { min-height: 100vh; }
 
+.admin-body {
+  padding: 28px 24px;
+  max-width: 860px;
+}
+
+.admin-title {
+  font-size: 18px;
+  color: #ffd060;
+}
+
+.user-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto auto;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--ark-line);
+  border-radius: 12px;
+}
