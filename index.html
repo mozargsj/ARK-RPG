@@ -1114,7 +1114,7 @@
         await userRef.update({ displayName: user.displayName || user.email, photoURL: user.photoURL || '' });
       }
 
-      if (currentRole === 'player' || currentRole === 'admin' || currentRole === 'mestre') {
+      if (currentRole === 'player') {
         await initSheetForUser(user.uid, false);
         showScreen('sheet');
       } else {
@@ -1130,9 +1130,10 @@
   /* ─── DASHBOARD ─── */
   async function loadDashboard() {
     const u = currentUser;
-    document.getElementById('dash-viewing-own').style.display = '';
+   
     document.getElementById('dash-avatar').src = u.photoURL || '';
     document.getElementById('btn-admin-panel').style.display = currentRole === 'admin' ? '' : 'none';
+    document.getElementById('dash-viewing-own').style.display = (currentRole === 'admin' || currentRole === 'master') ? '' : 'none';    
     document.getElementById('dash-name').textContent = u.displayName || u.email;
     const badge = document.getElementById('dash-role-badge');
     badge.textContent = currentRole === 'admin' ? 'Admin' : 'Mestre';
